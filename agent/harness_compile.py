@@ -165,6 +165,8 @@ class CompileFeedbackLoop:
                 persist_compile_success_artifacts,
                 urdf_xml=urdf_xml,
                 urdf_out=self.checkpoint_urdf_path,
+                usd_bytes=None,
+                usd_out=None,
                 outputs_root=None,
                 previous_sig=self._last_checkpoint_urdf_sig,
             )

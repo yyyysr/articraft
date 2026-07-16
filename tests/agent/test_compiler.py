@@ -144,14 +144,18 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
     viewer_dir.mkdir(parents=True)
 
     urdf_path = run_dir / "sample_run.urdf"
+    usd_path = run_dir / "sample_run.usd"
     sig = persist_compile_success_artifacts(
         urdf_xml="<robot name='sample'/>",
         urdf_out=urdf_path,
+        usd_bytes=b"PXR-USDC sample",
+        usd_out=usd_path,
         outputs_root=outputs_root,
     )
 
     assert sig is not None
     assert urdf_path.read_text(encoding="utf-8") == "<robot name='sample'/>"
+    assert usd_path.read_bytes() == b"PXR-USDC sample"
 
     manifest = json.loads((outputs_root / "manifest.json").read_text(encoding="utf-8"))
     assert manifest == {
@@ -166,6 +170,8 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
     duplicate_sig = persist_compile_success_artifacts(
         urdf_xml="<robot name='sample'/>",
         urdf_out=urdf_path,
+        usd_bytes=b"PXR-USDC sample",
+        usd_out=usd_path,
         outputs_root=outputs_root,
         previous_sig=sig,
     )

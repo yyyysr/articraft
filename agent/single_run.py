@@ -417,6 +417,7 @@ async def execute_single_run(
         if logged_cost is not None:
             logger.info("Total cost: $%.6f", logged_cost)
 
+    usd_bytes: bytes | None = None
     if result.urdf_xml is not None:
         urdf_xml = result.urdf_xml
         compile_warnings = list(result.compile_warnings)
@@ -431,6 +432,7 @@ async def execute_single_run(
             for warning in report.warnings:
                 logger.warning("%s", warning)
             urdf_xml = report.urdf_xml
+            usd_bytes = report.usd_bytes
             compile_warnings = list(report.warnings)
         except Exception as exc:
             logger.error("Failed to compile URDF: %s", exc)
@@ -474,6 +476,7 @@ async def execute_single_run(
             max_cost_usd=max_cost_usd,
             final_code=final_code,
             urdf_xml=urdf_xml,
+            usd_bytes=usd_bytes,
             compile_warnings=compile_warnings,
             turn_count=result.turn_count,
             tool_call_count=result.tool_call_count,

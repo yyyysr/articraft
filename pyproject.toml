@@ -22,6 +22,7 @@ dependencies = [
     "google-genai",
     "numpy>=2.4.1",
     "openai>=1.40.0",
+    "usd-core>=26.5",
     "python-dotenv>=1.0.0",
     "rich>=13.7.0",
     "uvicorn>=0.30.0",

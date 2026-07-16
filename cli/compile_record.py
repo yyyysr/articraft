@@ -116,9 +116,11 @@ def main(argv: list[str] | None = None) -> int:
         print(rendered)
 
     urdf_path = repo.layout.record_materialization_urdf_path(record_dir.name)
+    usd_path = repo.layout.record_materialization_usd_path(record_dir.name)
     action = "Compiled visuals for" if args.target == "visual" else "Recompiled"
     print(f"{action} {model_path}")
     print(f"Wrote URDF to {urdf_path}")
+    print(f"Wrote USD to {usd_path}")
     if result.warnings:
         print(f"Warnings: {len(result.warnings)}")
         for warning in result.warnings:

@@ -316,6 +316,7 @@ class SuccessRecordWrite:
     max_cost_usd: float | None
     final_code: str
     urdf_xml: str
+    usd_bytes: bytes | None
     compile_warnings: list[str]
     turn_count: int
     tool_call_count: int
@@ -570,6 +571,7 @@ def write_success_record(
     max_cost_usd = request.max_cost_usd
     final_code = request.final_code
     urdf_xml = request.urdf_xml
+    usd_bytes = request.usd_bytes
     compile_warnings = request.compile_warnings
     turn_count = request.turn_count
     tool_call_count = request.tool_call_count
@@ -606,9 +608,13 @@ def write_success_record(
     storage_repo.write_text(context.record_prompt_path, prompt_text)
     storage_repo.write_text(context.record_model_path, final_code)
     storage_repo.write_text(context.record_urdf_path, persisted_urdf_xml)
+    if isinstance(usd_bytes, (bytes, bytearray)):
+        usd_path = storage_repo.layout.record_materialization_usd_path(context.record_id)
+        usd_path.parent.mkdir(parents=True, exist_ok=True)
+        usd_path.write_bytes(bytes(usd_bytes))
     system_prompt_sha = _ensure_shared_system_prompt(storage_repo, system_prompt_path)
 
-    for stale_file in ("model.urdf", "compile_report.json"):
+    for stale_file in ("model.urdf", "model.usd", "compile_report.json"):
         stale_path = context.record_dir / stale_file
         if stale_path.exists():
             stale_path.unlink()
@@ -657,6 +663,7 @@ def write_success_record(
         record_id=context.record_id,
         status="success",
         urdf_path="model.urdf",
+        usd_path="model.usd" if isinstance(usd_bytes, (bytes, bytearray)) else None,
         warnings=[
             CompileWarning(code="warning", message=warning) for warning in persisted_warnings
         ],

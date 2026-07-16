@@ -115,6 +115,7 @@ class CompileReport:
     urdf_xml: str
     warnings: list[str]
     signal_bundle: CompileSignalBundle
+    usd_bytes: bytes | None = None
 
 
 @dataclass(slots=True, frozen=True)

@@ -158,6 +158,50 @@ def _extract_urdf_xml(
     return urdf_xml
 
 
+def _extract_usd_bytes(
+    globals_dict: dict,
+    *,
+    sdk_package: str = "sdk",
+    include_physical_collisions: bool = True,
+    validate_export: bool = True,
+    suppress_exceptions: bool = False,
+) -> bytes | None:
+    object_model = globals_dict.get("object_model")
+    usd_bytes: bytes | None = None
+    export_exc: Exception | None = None
+    try:
+        if object_model is not None:
+            compile_object_to_usd_bytes = getattr(
+                _import_sdk_module(sdk_package, ".v0._usd_export"),
+                "compile_object_to_usd_bytes",
+            )
+            script_dir = globals_dict.get("__file__")
+            asset_root = Path(script_dir).resolve().parent if isinstance(script_dir, str) else None
+            object_assets = getattr(object_model, "assets", None)
+            if object_assets is not None:
+                asset_root = object_assets
+            usd_bytes = compile_object_to_usd_bytes(
+                object_model,
+                asset_root=asset_root,
+                include_physical_collisions=include_physical_collisions,
+                validate=validate_export,
+            )
+            globals_dict["usd_bytes"] = usd_bytes
+    except Exception as exc:
+        export_exc = exc
+        usd_bytes = None
+
+    if not isinstance(usd_bytes, (bytes, bytearray)):
+        maybe_usd_bytes = globals_dict.get("usd_bytes")
+        if isinstance(maybe_usd_bytes, (bytes, bytearray)):
+            usd_bytes = bytes(maybe_usd_bytes)
+    if not isinstance(usd_bytes, (bytes, bytearray)) and export_exc is not None:
+        if suppress_exceptions:
+            return None
+        raise export_exc
+    return bytes(usd_bytes) if isinstance(usd_bytes, (bytes, bytearray)) else None
+
+
 def _attach_compiled_urdf_on_failure(
     exc: BaseException,
     *,
@@ -268,6 +312,13 @@ def _compile_urdf_report_impl(
                 target=target_key,
                 suppress_exceptions=True,
             )
+            usd_bytes = _extract_usd_bytes(
+                globals_dict,
+                sdk_package=sdk_package,
+                include_physical_collisions=target_key != "visual",
+                validate_export=False,
+                suppress_exceptions=True,
+            )
             signal_bundle = build_compile_signal_bundle(
                 status="failure",
                 warnings=warnings,
@@ -298,6 +349,7 @@ def _compile_urdf_report_impl(
                             warnings=warning_lines,
                             test_report=getattr(wrapped, "test_report", None),
                         ),
+                        usd_bytes=usd_bytes,
                     )
             raise wrapped from exc
 
@@ -311,6 +363,14 @@ def _compile_urdf_report_impl(
     )
     if not isinstance(urdf_xml, str):
         raise ValueError("object_model must compile into an exportable XML payload")
+    usd_bytes = _extract_usd_bytes(
+        globals_dict,
+        sdk_package=sdk_package,
+        include_physical_collisions=target_key != "visual",
+        validate_export=not (run_checks and target_key == "full"),
+    )
+    if usd_bytes is None:
+        raise ValueError("object_model must compile into model.usd")
     if _should_rewrite_visual_meshes_to_glb(
         sdk_package=sdk_package,
         rewrite_visual_glb=rewrite_visual_glb,
@@ -330,6 +390,7 @@ def _compile_urdf_report_impl(
         urdf_xml=urdf_xml,
         warnings=warnings,
         signal_bundle=signal_bundle,
+        usd_bytes=usd_bytes,
     )
 
 
@@ -591,6 +652,7 @@ def _compile_worker(
             "urdf_xml": report.urdf_xml,
             "warnings": report.warnings,
             "signal_bundle": report.signal_bundle.to_dict(),
+            "usd_bytes": report.usd_bytes,
         }
         conn.send(payload)  # type: ignore[attr-defined]
     except BaseException as exc:
@@ -691,6 +753,7 @@ def compile_urdf_report_maybe_timeout(
         urdf_xml = msg.get("urdf_xml")
         warnings = msg.get("warnings")
         signal_bundle_payload = msg.get("signal_bundle")
+        usd_bytes = msg.get("usd_bytes")
         if not isinstance(urdf_xml, str):
             raise RuntimeError("URDF compile failed: missing urdf_xml from worker")
         if not isinstance(warnings, list):
@@ -703,6 +766,7 @@ def compile_urdf_report_maybe_timeout(
             urdf_xml=urdf_xml,
             warnings=[str(w) for w in warnings],
             signal_bundle=signal_bundle,
+            usd_bytes=bytes(usd_bytes) if isinstance(usd_bytes, (bytes, bytearray)) else None,
         )
 
     error_text = str(msg.get("error", "Unknown compile worker error")).strip()
@@ -1250,6 +1314,8 @@ def persist_compile_success_artifacts(
     *,
     urdf_xml: str,
     urdf_out: Path | None,
+    usd_bytes: bytes | None = None,
+    usd_out: Path | None = None,
     outputs_root: Path | None,
     previous_sig: str | None = None,
 ) -> str | None:
@@ -1262,7 +1328,10 @@ def persist_compile_success_artifacts(
     if not isinstance(urdf_xml, str):
         return previous_sig
 
-    sig = hashlib.sha1(urdf_xml.encode("utf-8")).hexdigest()
+    sig_payload = urdf_xml.encode("utf-8")
+    if isinstance(usd_bytes, (bytes, bytearray)):
+        sig_payload += b"\0" + bytes(usd_bytes)
+    sig = hashlib.sha1(sig_payload).hexdigest()
     if previous_sig and sig == previous_sig:
         return previous_sig
 
@@ -1271,6 +1340,12 @@ def persist_compile_success_artifacts(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(urdf_xml, encoding="utf-8")
         logger.info("Wrote checkpoint URDF to %s", out_path)
+
+    if usd_out is not None and isinstance(usd_bytes, (bytes, bytearray)):
+        out_path = Path(usd_out).resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(bytes(usd_bytes))
+        logger.info("Wrote checkpoint USD to %s", out_path)
 
     if outputs_root is not None:
         update_manifest(Path(outputs_root).resolve())

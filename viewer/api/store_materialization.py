@@ -43,10 +43,11 @@ class ViewerMaterializationStore(ViewerStoreComponent):
         self,
         record_id: str,
         record: dict[str, Any] | None = None,
-    ) -> tuple[Path, Path, Path]:
+    ) -> tuple[Path, Path, Path, Path]:
         return (
             active_model_path(self.repo, record_id, record=record),
             self.repo.layout.record_materialization_urdf_path(record_id),
+            self.repo.layout.record_materialization_usd_path(record_id),
             self.repo.layout.record_materialization_compile_report_path(record_id),
         )
 
@@ -61,6 +62,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
         return _latest_path_mtime_to_utc(
             [
                 layout.record_materialization_urdf_path(record_id),
+                layout.record_materialization_usd_path(record_id),
                 layout.record_materialization_compile_report_path(record_id),
                 layout.record_materialization_assets_dir(record_id),
                 layout.record_materialization_asset_meshes_dir(record_id),
@@ -76,12 +78,15 @@ class ViewerMaterializationStore(ViewerStoreComponent):
         record_dir: Path,
         model_dir: Path,
         urdf_path: Path,
+        usd_path: Path,
         compile_path: Path,
     ) -> None:
         for path in (
             urdf_path,
+            usd_path,
             compile_path,
             record_dir / "model.urdf",
+            record_dir / "model.usd",
             record_dir / "compile_report.json",
             record_dir / "assets",
             model_dir / "assets",
@@ -91,7 +96,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
         ):
             _remove_path_if_exists(path)
 
-    def _persist_local_materialization_outputs(
+    def _promote_local_materialization_outputs(
         self,
         record_id: str,
         *,
@@ -99,6 +104,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
         model_dir: Path,
     ) -> None:
         _remove_path_if_exists(record_dir / "model.urdf")
+        _remove_path_if_exists(record_dir / "model.usd")
         _remove_path_if_exists(record_dir / "compile_report.json")
         _remove_path_if_exists(self.repo.layout.record_materialization_assets_dir(record_id))
         _replace_tree_from_source(
@@ -155,6 +161,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
             record_id=record_id,
             status=status,
             urdf_path="model.urdf",
+            usd_path="model.usd",
             warnings=[CompileWarning(code="warning", message=warning) for warning in warnings],
             checks_run=list(checks_run or ["compile_urdf"]),
             metrics=metrics,
@@ -178,7 +185,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
         if not isinstance(record, dict):
             raise FileNotFoundError(f"Record not found: {record_id}")
 
-        model_path, urdf_path, compile_path = self._record_compile_paths(
+        model_path, urdf_path, usd_path, compile_path = self._record_compile_paths(
             record_id,
             record,
         )
@@ -222,7 +229,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
             if not isinstance(refreshed_record, dict):
                 raise FileNotFoundError(f"Record not found: {record_id}")
 
-            model_path, urdf_path, compile_path = self._record_compile_paths(
+            model_path, urdf_path, usd_path, compile_path = self._record_compile_paths(
                 record_id,
                 refreshed_record,
             )
@@ -266,6 +273,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
                     record_dir=record_dir,
                     model_dir=model_path.parent,
                     urdf_path=urdf_path,
+                    usd_path=usd_path,
                     compile_path=compile_path,
                 )
 
@@ -324,7 +332,10 @@ class ViewerMaterializationStore(ViewerStoreComponent):
 
             compile_elapsed_seconds = time.perf_counter() - compile_started_at
             self.repo.write_text(urdf_path, compile_result.urdf_xml)
-            self._persist_local_materialization_outputs(
+            if isinstance(compile_result.usd_bytes, (bytes, bytearray)):
+                usd_path.parent.mkdir(parents=True, exist_ok=True)
+                usd_path.write_bytes(bytes(compile_result.usd_bytes))
+            self._promote_local_materialization_outputs(
                 record_id,
                 record_dir=record_dir,
                 model_dir=model_path.parent,

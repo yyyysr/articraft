@@ -78,6 +78,9 @@ class ViewerFileResolver:
         if requested_path.parts == ("model.urdf",):
             root = self.repo.layout.record_materialization_dir(record_id).resolve()
             target = self.repo.layout.record_materialization_urdf_path(record_id).resolve()
+        elif requested_path.parts == ("model.usd",):
+            root = self.repo.layout.record_materialization_dir(record_id).resolve()
+            target = self.repo.layout.record_materialization_usd_path(record_id).resolve()
         elif requested_path.parts == ("compile_report.json",):
             root = self.repo.layout.record_materialization_dir(record_id).resolve()
             target = self.repo.layout.record_materialization_compile_report_path(
@@ -379,7 +382,7 @@ class ViewerFileResolver:
 
 def should_attempt_materialize_for_record_path(file_path: str) -> bool:
     requested_path = Path(file_path)
-    if requested_path.parts == ("model.urdf",):
+    if requested_path.parts in {("model.urdf",), ("model.usd",)}:
         return True
     if len(requested_path.parts) >= 2 and requested_path.parts[0] == "assets":
         return requested_path.parts[1] in {"meshes", "glb", "viewer"}

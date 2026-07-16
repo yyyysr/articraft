@@ -173,6 +173,7 @@ def materialization_paths(repo: StorageRepo, record_id: str) -> dict[str, Path]:
     return {
         "root": repo.layout.record_materialization_dir(record_id),
         "model_urdf": repo.layout.record_materialization_urdf_path(record_id),
+        "model_usd": repo.layout.record_materialization_usd_path(record_id),
         "compile_report_json": repo.layout.record_materialization_compile_report_path(record_id),
         "assets_dir": repo.layout.record_materialization_assets_dir(record_id),
         "meshes_dir": repo.layout.record_materialization_asset_meshes_dir(record_id),

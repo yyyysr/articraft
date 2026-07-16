@@ -217,6 +217,7 @@ class CompileReport:
     record_id: str
     status: str
     urdf_path: str
+    usd_path: str | None = None
     warnings: list[CompileWarning] = field(default_factory=list)
     checks_run: list[str] = field(default_factory=list)
     overlap_allowances: list[dict[str, Any]] = field(default_factory=list)
@@ -234,6 +235,8 @@ class CompileReport:
             "overlap_allowances": list(self.overlap_allowances),
             "metrics": dict(self.metrics),
         }
+        if self.usd_path is not None:
+            payload["usd_path"] = self.usd_path
         if self.signal_bundle is not None:
             payload["signal_bundle"] = dict(self.signal_bundle)
         return payload
