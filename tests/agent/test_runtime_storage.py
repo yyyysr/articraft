@@ -88,6 +88,7 @@ class MeshVisualAgent(FakeAgent):
                 "</link>"
                 "</robot>"
             ),
+            usd_bytes=b"PXR-USDC mesh visual",
             compile_warnings=[],
             turn_count=3,
             tool_call_count=5,
@@ -178,6 +179,7 @@ class AllInTotalsAgent(FakeAgent):
             conversation=[{"role": "user", "content": user_content}],
             final_code=self.file_path.read_text(encoding="utf-8"),
             urdf_xml="<robot name='test'/>",
+            usd_bytes=b"PXR-USDC totals",
             compile_warnings=[],
             turn_count=1,
             tool_call_count=0,
@@ -226,11 +228,13 @@ def test_library_run_and_rerun_persist_runtime_artifacts(
     assert (materialization_dir / "model.urdf").read_text(
         encoding="utf-8"
     ) == "<robot name='test'/>"
+    assert (materialization_dir / "model.usd").read_bytes() == b"PXR-USDC test"
     assert (materialization_dir / "compile_report.json").exists()
     compile_report = json.loads(
         (materialization_dir / "compile_report.json").read_text(encoding="utf-8")
     )
     assert compile_report["metrics"]["compile_level"] == "full"
+    assert compile_report["usd_path"] == "model.usd"
     assert compile_report["metrics"]["fingerprint_inputs"]["model_py_sha256"]
     assert compile_report["metrics"]["materialization_fingerprint"]
     assert not (materialization_dir / "assets" / "meshes").exists()

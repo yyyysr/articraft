@@ -26,6 +26,7 @@ class AgentResult:
     conversation: list[dict[str, Any]]
     final_code: str | None = None
     urdf_xml: str | None = None
+    usd_bytes: bytes | None = None
     compile_warnings: list[str] = field(default_factory=list)
     turn_count: int = 0
     tool_call_count: int = 0

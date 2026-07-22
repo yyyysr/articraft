@@ -417,8 +417,8 @@ async def execute_single_run(
         if logged_cost is not None:
             logger.info("Total cost: $%.6f", logged_cost)
 
-    usd_bytes: bytes | None = None
-    if result.urdf_xml is not None:
+    usd_bytes = result.usd_bytes
+    if result.urdf_xml is not None and usd_bytes is not None:
         urdf_xml = result.urdf_xml
         compile_warnings = list(result.compile_warnings)
     else:
@@ -435,10 +435,10 @@ async def execute_single_run(
             usd_bytes = report.usd_bytes
             compile_warnings = list(report.warnings)
         except Exception as exc:
-            logger.error("Failed to compile URDF: %s", exc)
+            logger.error("Failed to compile final URDF/USD artifacts: %s", exc)
             return await _persist_failure(
                 exit_code=3,
-                message=f"Failed to compile URDF: {exc}",
+                message=f"Failed to compile final URDF/USD artifacts: {exc}",
                 actual_model_id=actual_model_id,
                 turn_count=result.turn_count,
                 tool_call_count=result.tool_call_count,

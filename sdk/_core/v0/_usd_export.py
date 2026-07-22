@@ -362,7 +362,7 @@ def _apply_collision(prim: Usd.Prim) -> None:
     UsdPhysics.CollisionAPI.Apply(prim).CreateCollisionEnabledAttr(True)
     if prim.IsA(UsdGeom.Mesh):
         UsdPhysics.MeshCollisionAPI.Apply(prim).CreateApproximationAttr(
-            UsdPhysics.Tokens.convexHull
+            UsdPhysics.Tokens.convexDecomposition
         )
 
 

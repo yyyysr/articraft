@@ -64,6 +64,7 @@ class FakeAgent:
             conversation=[{"role": "user", "content": user_content}],
             final_code=self.file_path.read_text(encoding="utf-8"),
             urdf_xml="<robot name='test'/>",
+            usd_bytes=b"PXR-USDC test",
             compile_warnings=["warning: test"],
             turn_count=3,
             tool_call_count=5,
