@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Sequence
 
+from ._physics_properties import resolve_part_inertial
 from .articulated_object import ArticulatedObject
 from .errors import ValidationError
 from .exact_collisions import compile_object_model_with_exact_collisions
@@ -50,7 +51,7 @@ def compile_object_to_urdf_xml(
         root.append(_material_element(material))
 
     for part in compiled_model.parts:
-        root.append(_part_element(part))
+        root.append(_part_element(part, asset_root=compiled_model.assets))
 
     for articulation in compiled_model.articulations:
         root.append(_articulation_element(articulation))
@@ -170,10 +171,10 @@ def _inertial_element(inertial: Inertial) -> ET.Element:
     return elem
 
 
-def _part_element(part: Part) -> ET.Element:
+def _part_element(part: Part, *, asset_root: object = None) -> ET.Element:
     elem = ET.Element("link", {"name": part.name})
-    if part.inertial:
-        elem.append(_inertial_element(part.inertial))
+    inertial, _source = resolve_part_inertial(part, asset_root=asset_root)
+    elem.append(_inertial_element(inertial))
     for visual in part.visuals:
         elem.append(_visual_element(visual))
     for collision in part.collisions:

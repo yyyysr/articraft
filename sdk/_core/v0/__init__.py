@@ -27,6 +27,7 @@ from .types import (
     Inertia,
     Inertial,
     Material,
+    PhysicsMaterial,
     Mesh,
     Mimic,
     MotionLimits,

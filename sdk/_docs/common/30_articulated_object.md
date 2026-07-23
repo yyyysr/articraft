@@ -57,12 +57,14 @@ model.part(
     *,
     visuals: Iterable[Visual] | None = None,
     inertial: Inertial | None = None,
+    physics_material: PhysicsMaterial | None = None,
     meta: dict[str, object] | None = None,
 ) -> Part
 ```
 
 - Creates a `Part`, appends it to `model.parts`, and returns it.
 - The returned part is the normal place to call `part.visual(...)`.
+- `physics_material` configures density and contact properties for USD physics export.
 
 ### `model.articulation(...)`
 

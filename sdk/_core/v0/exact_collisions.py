@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 _COMPILED_MODEL_CACHE_ATTR = "_sdk_exact_collision_model_cache"
 _ALLOW_EXPLICIT_COLLISIONS_ATTR = "_sdk_allow_explicit_collisions"
-_CACHE_VERSION = 7
+_CACHE_VERSION = 8
 
 
 def compile_object_model_with_exact_collisions(
@@ -55,6 +55,7 @@ def compile_object_model_with_exact_collisions(
             visuals=[copy.deepcopy(visual) for visual in source_part.visuals],
             collisions=[],
             inertial=copy.deepcopy(source_part.inertial),
+            physics_material=copy.deepcopy(source_part.physics_material),
             meta=copy.deepcopy(source_part.meta),
             assets=coerce_asset_context(getattr(source_part, "assets", None)) or assets,
         )
@@ -184,6 +185,7 @@ def _serialize_object_model(object_model: "ArticulatedObject") -> dict[str, obje
                     for visual in part.visuals
                 ],
                 "inertial": _serialize_inertial(part.inertial),
+                "physics_material": _serialize_physics_material(part.physics_material),
                 "meta": part.meta,
                 "assets": _serialize_assets(getattr(part, "assets", None)),
             }
@@ -289,6 +291,18 @@ def _serialize_inertial(inertial: object) -> object:
             "iyz": inertia.iyz,
             "izz": inertia.izz,
         },
+    }
+
+
+def _serialize_physics_material(material: object) -> object:
+    if material is None:
+        return None
+    return {
+        "name": getattr(material, "name", None),
+        "density": getattr(material, "density", None),
+        "static_friction": getattr(material, "static_friction", None),
+        "dynamic_friction": getattr(material, "dynamic_friction", None),
+        "restitution": getattr(material, "restitution", None),
     }
 
 

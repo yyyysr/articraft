@@ -21,6 +21,7 @@ from .types import (
     MotionProperties,
     Origin,
     Part,
+    PhysicsMaterial,
     Sphere,
     Vec3,
     Visual,
@@ -109,6 +110,7 @@ class ArticulatedObject:
         *,
         visuals: Optional[Iterable[Visual]] = None,
         inertial: Optional[Inertial] = None,
+        physics_material: Optional[PhysicsMaterial] = None,
         meta: Optional[Dict[str, object]] = None,
     ) -> Part:
         part = Part(
@@ -116,6 +118,7 @@ class ArticulatedObject:
             visuals=list(visuals or []),
             collisions=[],
             inertial=inertial,
+            physics_material=physics_material,
             meta=dict(meta or {}),
             assets=self.assets,
         )
@@ -129,12 +132,14 @@ class ArticulatedObject:
         *,
         visuals: Optional[Iterable[Visual]] = None,
         inertial: Optional[Inertial] = None,
+        physics_material: Optional[PhysicsMaterial] = None,
         meta: Optional[Dict[str, object]] = None,
     ) -> Part:
         return self.part(
             name,
             visuals=visuals,
             inertial=inertial,
+            physics_material=physics_material,
             meta=meta,
         )
 

@@ -16,6 +16,7 @@ from sdk import (
     Sphere,
     Mesh,
     Material,
+    PhysicsMaterial,
     Visual,
     Inertia,
     Inertial,
@@ -42,7 +43,7 @@ from sdk import (
 
 - `Origin`
 - `Box`, `Cylinder`, `Sphere`, `Mesh`
-- `Material`, `Visual`
+- `Material`, `PhysicsMaterial`, `Visual`
 - `Inertia`, `Inertial.from_geometry(...)`
 - `MotionLimits`, `MotionProperties`, `Mimic`
 - `Part.visual(...)`, `Part.get_visual(...)`
@@ -199,6 +200,24 @@ Inertial.from_geometry(
 - Supports `Box`, `Cylinder`, and `Sphere`.
 - Raises `ValidationError` for mesh geometry.
 
+### `PhysicsMaterial`
+
+```python
+PhysicsMaterial(
+    name: str = "default",
+    density: float = 700.0,
+    static_friction: float = 0.6,
+    dynamic_friction: float = 0.45,
+    restitution: float = 0.05,
+)
+```
+
+Pass `physics_material=` when creating a part to configure its collision
+contact material and density for USD export. When a part has no explicit
+`Inertial`, USD export derives mass, center of mass, and diagonal inertia from
+compiled collision geometry and this density. Explicit `Inertial` values take
+precedence.
+
 ## Motion
 
 ### `MotionLimits`
@@ -263,6 +282,7 @@ Part(
     visuals: list[Visual] = [],
     collisions: list[Collision] = [],
     inertial: Inertial | None = None,
+    physics_material: PhysicsMaterial | None = None,
     meta: dict[str, object] = {},
 )
 ```

@@ -9,6 +9,7 @@ from typing import Iterable, Sequence
 import numpy as np
 from pxr import Gf, Sdf, Tf, Usd, UsdGeom, UsdPhysics, UsdShade, Vt
 
+from ._physics_properties import resolve_part_inertial
 from .articulated_object import ArticulatedObject
 from .assets import resolve_mesh_path
 from .errors import ValidationError
@@ -24,11 +25,13 @@ from .types import (
     Box,
     Cylinder,
     Geometry,
+    Inertial,
     Material,
     Mesh,
     MotionLimits,
     Origin,
     Part,
+    PhysicsMaterial,
     Sphere,
     Visual,
 )
@@ -40,6 +43,7 @@ Vec3 = tuple[float, float, float]
 USD_ROOT_PATH = "/root"
 USD_LOOKS_SCOPE = "Looks"
 USD_PHYSICS_SCOPE = "Physics"
+USD_PHYSICS_MATERIALS_SCOPE = "Materials"
 USD_VISUALS_SCOPE = "Visuals"
 USD_COLLISIONS_SCOPE = "Collisions"
 USD_JOINTS_SCOPE = "Joints"
@@ -98,6 +102,10 @@ def compile_object_to_usd_file(
 
     UsdGeom.Scope.Define(stage, f"{USD_ROOT_PATH}/{USD_LOOKS_SCOPE}")
     UsdGeom.Scope.Define(stage, f"{USD_ROOT_PATH}/{USD_PHYSICS_SCOPE}")
+    UsdGeom.Scope.Define(
+        stage,
+        f"{USD_ROOT_PATH}/{USD_PHYSICS_SCOPE}/{USD_PHYSICS_MATERIALS_SCOPE}",
+    )
     UsdGeom.Scope.Define(stage, f"{USD_ROOT_PATH}/{USD_JOINTS_SCOPE}")
     physics_scene = UsdPhysics.Scene.Define(
         stage,
@@ -107,6 +115,8 @@ def compile_object_to_usd_file(
     physics_scene.CreateGravityMagnitudeAttr(9.81)
 
     material_paths = _define_materials(stage, compiled_model)
+    physics_material_paths: dict[PhysicsMaterial, Sdf.Path] = {}
+    used_physics_material_names: set[str] = set()
     world_transforms = compute_part_world_transforms(compiled_model, {})
     part_paths: dict[str, Sdf.Path] = {}
     used_part_names: set[str] = set()
@@ -120,7 +130,8 @@ def compile_object_to_usd_file(
         body.GetPrim().CreateAttribute("articraft:partName", Sdf.ValueTypeNames.String).Set(
             part.name
         )
-        _apply_rigid_body(body, part)
+        inertial, inertial_source = resolve_part_inertial(part, asset_root=resolved_assets)
+        _apply_rigid_body(body, inertial=inertial, source=inertial_source)
 
         visuals = UsdGeom.Xform.Define(stage, str(part_path.AppendChild(USD_VISUALS_SCOPE)))
         collisions = UsdGeom.Xform.Define(
@@ -154,6 +165,12 @@ def compile_object_to_usd_file(
                 )
 
         used_collision_names: set[str] = set()
+        physics_material_path = _physics_material_path_for_part(
+            stage,
+            part,
+            paths=physics_material_paths,
+            used_names=used_physics_material_names,
+        )
         for index, collision in enumerate(part.collisions):
             collision_name = _unique_identifier(
                 collision.name or f"collision_{index:03d}",
@@ -171,7 +188,7 @@ def compile_object_to_usd_file(
                 prim.CreateAttribute("articraft:elementName", Sdf.ValueTypeNames.String).Set(
                     collision.name
                 )
-            _apply_collision(prim)
+            _apply_collision(stage, prim, physics_material_path=physics_material_path)
 
     used_joint_names: set[str] = set()
     for articulation in compiled_model.articulations:
@@ -338,24 +355,33 @@ def _author_mesh_arrays(
     mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
 
 
-def _apply_rigid_body(body: UsdGeom.Xform, part: Part) -> None:
+def _apply_rigid_body(
+    body: UsdGeom.Xform,
+    *,
+    inertial: Inertial,
+    source: str,
+) -> None:
     UsdPhysics.RigidBodyAPI.Apply(body.GetPrim()).CreateRigidBodyEnabledAttr(True)
-    if part.inertial is None:
-        return
     mass_api = UsdPhysics.MassAPI.Apply(body.GetPrim())
-    mass_api.CreateMassAttr(float(part.inertial.mass))
-    mass_api.CreateCenterOfMassAttr(Gf.Vec3f(*tuple(float(v) for v in part.inertial.origin.xyz)))
+    mass_api.CreateMassAttr(float(inertial.mass))
+    mass_api.CreateCenterOfMassAttr(Gf.Vec3f(*tuple(float(v) for v in inertial.origin.xyz)))
     mass_api.CreateDiagonalInertiaAttr(
         Gf.Vec3f(
-            float(part.inertial.inertia.ixx),
-            float(part.inertial.inertia.iyy),
-            float(part.inertial.inertia.izz),
+            float(inertial.inertia.ixx),
+            float(inertial.inertia.iyy),
+            float(inertial.inertia.izz),
         )
     )
-    mass_api.CreatePrincipalAxesAttr(_origin_quat(part.inertial.origin))
+    mass_api.CreatePrincipalAxesAttr(_origin_quat(inertial.origin))
+    body.GetPrim().CreateAttribute("articraft:inertialSource", Sdf.ValueTypeNames.Token).Set(source)
 
 
-def _apply_collision(prim: Usd.Prim) -> None:
+def _apply_collision(
+    stage: Usd.Stage,
+    prim: Usd.Prim,
+    *,
+    physics_material_path: Sdf.Path,
+) -> None:
     imageable = UsdGeom.Imageable(prim)
     if imageable:
         imageable.CreatePurposeAttr(UsdGeom.Tokens.guide)
@@ -364,6 +390,36 @@ def _apply_collision(prim: Usd.Prim) -> None:
         UsdPhysics.MeshCollisionAPI.Apply(prim).CreateApproximationAttr(
             UsdPhysics.Tokens.convexDecomposition
         )
+    UsdShade.MaterialBindingAPI.Apply(prim).Bind(
+        UsdShade.Material.Get(stage, physics_material_path),
+        materialPurpose="physics",
+    )
+
+
+def _physics_material_path_for_part(
+    stage: Usd.Stage,
+    part: Part,
+    *,
+    paths: dict[PhysicsMaterial, Sdf.Path],
+    used_names: set[str],
+) -> Sdf.Path:
+    material = part.physics_material or PhysicsMaterial()
+    existing = paths.get(material)
+    if existing is not None:
+        return existing
+
+    token = _unique_identifier(material.name, used_names)
+    path = Sdf.Path(f"{USD_ROOT_PATH}/{USD_PHYSICS_SCOPE}/{USD_PHYSICS_MATERIALS_SCOPE}/{token}")
+    usd_material = UsdShade.Material.Define(stage, str(path))
+    physics_api = UsdPhysics.MaterialAPI.Apply(usd_material.GetPrim())
+    physics_api.CreateStaticFrictionAttr(float(material.static_friction))
+    physics_api.CreateDynamicFrictionAttr(float(material.dynamic_friction))
+    physics_api.CreateRestitutionAttr(float(material.restitution))
+    usd_material.GetPrim().CreateAttribute("articraft:density", Sdf.ValueTypeNames.Float).Set(
+        float(material.density)
+    )
+    paths[material] = path
+    return path
 
 
 def _define_joint(

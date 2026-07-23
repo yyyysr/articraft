@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass, field
 from enum import Enum
@@ -164,6 +165,41 @@ class Material:
         self.rgba = _normalize_material_rgba(self.rgba)
 
 
+@dataclass(frozen=True)
+class PhysicsMaterial:
+    """Contact and density properties used only for physics export."""
+
+    name: str = "default"
+    density: float = 700.0
+    static_friction: float = 0.6
+    dynamic_friction: float = 0.45
+    restitution: float = 0.05
+
+    def __post_init__(self) -> None:
+        name = str(self.name).strip()
+        if not name:
+            raise ValidationError("physics_material.name is required")
+        density = float(self.density)
+        static_friction = float(self.static_friction)
+        dynamic_friction = float(self.dynamic_friction)
+        restitution = float(self.restitution)
+        if not math.isfinite(density) or density <= 0.0:
+            raise ValidationError("physics_material.density must be positive")
+        if not math.isfinite(static_friction) or static_friction < 0.0:
+            raise ValidationError("physics_material.static_friction must be non-negative")
+        if not math.isfinite(dynamic_friction) or not 0.0 <= dynamic_friction <= static_friction:
+            raise ValidationError(
+                "physics_material.dynamic_friction must be non-negative and not exceed static_friction"
+            )
+        if not math.isfinite(restitution) or not 0.0 <= restitution <= 1.0:
+            raise ValidationError("physics_material.restitution must be in [0, 1]")
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "density", density)
+        object.__setattr__(self, "static_friction", static_friction)
+        object.__setattr__(self, "dynamic_friction", dynamic_friction)
+        object.__setattr__(self, "restitution", restitution)
+
+
 MaterialRef = Union[Material, str]
 
 
@@ -307,6 +343,7 @@ class Part:
     visuals: List[Visual] = field(default_factory=list)
     collisions: List[Collision] = field(default_factory=list)
     inertial: Optional[Inertial] = None
+    physics_material: Optional[PhysicsMaterial] = None
     meta: Dict[str, object] = field(default_factory=dict)
     assets: Optional[AssetContext] = None
 
