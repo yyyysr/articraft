@@ -217,12 +217,19 @@ model.material(
     rgba: Sequence[float] | None = None,
     color: Sequence[float] | None = None,
     texture: str | None = None,
+    catalog: str | None = None,
+    catalog_material: str | None = None,
+    parameters: Mapping[str, object] | None = None,
 ) -> Material
 ```
 
 - Registers the material on `model.materials`.
 - Use either `rgba=...` or `color=...`, not both.
 - A 3-tuple color is expanded to `(r, g, b, 1.0)`.
+- `catalog` and `catalog_material` opt into a searchable material catalog. Set
+  both together; ordinary `rgba` and `texture` materials remain supported.
+- Use `find_materials` before authoring a catalog material name. Read
+  `docs/sdk/references/material-catalogs.md` for the catalog workflow.
 
 ## Lookup Helpers
 

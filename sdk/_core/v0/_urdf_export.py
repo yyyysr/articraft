@@ -9,6 +9,7 @@ from ._physics_properties import resolve_part_inertial
 from .articulated_object import ArticulatedObject
 from .errors import ValidationError
 from .exact_collisions import compile_object_model_with_exact_collisions
+from .material_catalog import catalog_fallback_rgba, resolve_material_entry
 from .types import (
     Articulation,
     ArticulationType,
@@ -119,8 +120,12 @@ def _geometry_element(parent: ET.Element, geometry: Geometry) -> None:
 
 def _material_element(material: Material) -> ET.Element:
     elem = ET.Element("material", {"name": material.name})
-    if material.rgba is not None:
-        rgba = tuple(float(v) for v in material.rgba)
+    resolved_rgba = material.rgba
+    if resolved_rgba is None and material.catalog:
+        entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+        resolved_rgba = catalog_fallback_rgba(entry)
+    if resolved_rgba is not None:
+        rgba = tuple(float(v) for v in resolved_rgba)
         if len(rgba) == 3:
             rgba = rgba + (1.0,)
         if len(rgba) != 4:

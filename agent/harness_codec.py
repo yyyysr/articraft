@@ -5,7 +5,9 @@ from typing import Optional
 
 from articraft.values import ProviderName
 
-PARALLEL_SAFE_TOOL_NAMES = frozenset({"read_file", "find_examples", "probe_model"})
+PARALLEL_SAFE_TOOL_NAMES = frozenset(
+    {"read_file", "find_examples", "find_materials", "probe_model"}
+)
 
 
 @dataclass(frozen=True)

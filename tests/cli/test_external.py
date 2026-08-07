@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -61,6 +62,10 @@ def test_external_finalize_updates_category_and_manifest(tmp_path: Path) -> None
         == 0
     )
 
+    repo = StorageRepo(tmp_path)
+    model_path = repo.layout.record_revision_model_path("rec_external_lamp", "rev_000001")
+    model_path.write_text("object_model = 'edited externally'\n", encoding="utf-8")
+
     exit_code = external_cli.main(
         [
             "--repo-root",
@@ -73,15 +78,72 @@ def test_external_finalize_updates_category_and_manifest(tmp_path: Path) -> None
     )
 
     assert exit_code == 0
-    repo = StorageRepo(tmp_path)
     record = json.loads(
         repo.layout.record_metadata_path("rec_external_lamp").read_text(encoding="utf-8")
     )
     assert record["category_slug"] == "desk_lamp"
+    expected_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
+    assert record["hashes"]["model_py_sha256"] == expected_hash
+    revision = repo.read_json(
+        repo.layout.record_revision_metadata_path("rec_external_lamp", "rev_000001")
+    )
+    assert revision["hashes"]["model_py_sha256"] == expected_hash
     rows = load_manifest(repo)
     assert len(rows) == 1
     assert rows[0]["record_id"] == "rec_external_lamp"
     assert rows[0]["category_slug"] == "desk_lamp"
+
+
+def test_external_fork_preserves_creator_and_parent_model(tmp_path: Path, capsys) -> None:
+    assert (
+        external_cli.main(
+            [
+                "--repo-root",
+                str(tmp_path),
+                "init",
+                "--agent",
+                "codex",
+                "--record-id",
+                "rec_parent_lamp",
+                "desk lamp",
+            ]
+        )
+        == 0
+    )
+    repo = StorageRepo(tmp_path)
+    parent_model = repo.layout.record_revision_model_path("rec_parent_lamp", "rev_000001")
+    parent_model.write_text("object_model = 'parent model'\n", encoding="utf-8")
+    capsys.readouterr()
+
+    exit_code = external_cli.main(
+        [
+            "--repo-root",
+            str(tmp_path),
+            "fork",
+            "rec_parent_lamp",
+            "change the shade material",
+            "--record-id",
+            "rec_child_lamp",
+        ]
+    )
+
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert "record_id=rec_child_lamp" in output
+    child = repo.read_json(repo.layout.record_metadata_path("rec_child_lamp"))
+    assert child["creator"] == {
+        "mode": "external_agent",
+        "agent": "codex",
+        "trace_available": False,
+    }
+    assert child["lineage"] == {
+        "origin_record_id": "rec_parent_lamp",
+        "parent_record_id": "rec_parent_lamp",
+        "parent_revision_id": "rev_000001",
+        "edit_mode": "copy",
+    }
+    child_model = repo.layout.record_revision_model_path("rec_child_lamp", "rev_000001")
+    assert child_model.read_text(encoding="utf-8") == "object_model = 'parent model'\n"
 
 
 def test_external_categories_lists_local_categories(tmp_path: Path, capsys) -> None:
@@ -101,6 +163,7 @@ def test_external_docs_reference_current_commands() -> None:
     external_docs = (root / "EXTERNAL_AGENT_DATA.md").read_text(encoding="utf-8")
 
     assert "articraft external init" in external_docs
+    assert "articraft external fork" in external_docs
     assert "articraft compile <record_id>" in external_docs
     assert "articraft external finalize" in external_docs
     assert "articraft external check" not in external_docs

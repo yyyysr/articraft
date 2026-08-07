@@ -1,0 +1,5 @@
+version: 1
+catalogs:
+  - id: builtin_openpbr
+    metadata: catalogs/builtin_openpbr/catalog.yaml
+    manifest: catalogs/builtin_openpbr/materials.yaml

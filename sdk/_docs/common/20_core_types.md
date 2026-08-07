@@ -128,6 +128,9 @@ Material(
     texture: str | None = None,
     *,
     color: tuple[float, float, float] | tuple[float, float, float, float] | None = None,
+    catalog: str | None = None,
+    catalog_material: str | None = None,
+    parameters: Mapping[str, object] | None = None,
 )
 ```
 
@@ -135,6 +138,12 @@ Material(
 - `rgba`: 3 or 4 floats. A 3-tuple is expanded to `(r, g, b, 1.0)`.
 - `color`: compatibility alias for `rgba`. Use either `rgba` or `color`, not both.
 - `texture`: optional texture path.
+- `catalog` and `catalog_material`: optional exact pair returned by
+  `find_materials`. Set both together. Catalog materials are an opt-in visual
+  enhancement; ordinary `rgba` and `texture` materials remain first-class.
+- `parameters`: optional catalog-declared overrides. Do not invent keys.
+- Read `material-catalogs.md` for selection, fallback, and textured-material
+  behavior. The agent never needs to inspect a material USD file.
 
 ### `Visual`
 

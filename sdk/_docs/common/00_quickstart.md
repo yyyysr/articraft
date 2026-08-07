@@ -41,6 +41,8 @@ Always available in `docs/sdk/references/`:
 - `errors.md`: common compile and authoring failures, plus how to interpret them.
 - `core-types.md`: geometry, material, articulation, and test-related core
   types, plus optional inertial helpers.
+- `material-catalogs.md`: optional searchable visual-material catalogs,
+  per-visual binding, renderer fallbacks, and textured-material requirements.
 - `articulated-object.md`: object, part, and articulation authoring helpers and lookup
   patterns.
 - `assets.md`: explicit asset-root helpers for standalone scripts and tests.
@@ -78,6 +80,12 @@ tire, vent grille, bracket, or hinge, read that focused geometry page before
 falling back to the low-level mesh page.
 
 Read the exact document you need. Do not guess helper names or signatures from memory.
+
+When a named realistic surface finish would materially improve the object, call
+`find_materials` and use an exact returned catalog/name pair. Do not read the
+material USD and do not invent catalog names. Catalog use is optional: retain
+ordinary `rgba` or `texture` materials when they are adequate. Read
+`docs/sdk/references/material-catalogs.md` only when using this workflow.
 
 ## Script Contract
 

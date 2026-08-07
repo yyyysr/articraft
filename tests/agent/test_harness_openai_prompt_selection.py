@@ -72,7 +72,7 @@ def test_openai_prompt_resolution_and_payload_preview() -> None:
 
     # Tool contract
     assert (
-        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, and `find_examples`."
+        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in instructions
     )
     assert "FREEFORM tool" in instructions
@@ -159,7 +159,7 @@ def test_openai_payload_preview_includes_find_examples_tool() -> None:
     assert strict_by_name["probe_model"] is True
     assert strict_by_name["find_examples"] is True
     assert (
-        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, and `find_examples`."
+        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in payload["instructions"]
     )
     assert "searches curated SDK examples for patterns" in payload["instructions"]
@@ -323,7 +323,7 @@ def test_gemini_prompt_resolution_and_payload_preview() -> None:
 
     # Tool contract
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_examples`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in gemini_instructions
     )
     assert "write_code" not in gemini_instructions
@@ -400,7 +400,7 @@ def test_gemini_payload_preview_includes_find_examples_tool() -> None:
     assert "probe_model" in tool_names
     assert "find_examples" in tool_names
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_examples`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in payload["config"]["system_instruction"]
     )
     assert "searches curated SDK examples for patterns" in payload["config"]["system_instruction"]
@@ -438,7 +438,7 @@ def test_openrouter_prompt_resolution_and_payload_preview() -> None:
         in instructions
     )
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_examples`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in instructions
     )
     assert "FREEFORM tool" not in instructions
@@ -494,7 +494,7 @@ def test_anthropic_prompt_resolution_and_payload_preview() -> None:
         in instructions
     )
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_examples`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in instructions
     )
     assert "FREEFORM tool" not in instructions

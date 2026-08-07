@@ -19,6 +19,11 @@ from .geometry_qc import (
     _origin_to_mat4,
     compute_part_world_transforms,
 )
+from .material_catalog import (
+    copy_catalog_material,
+    resolve_material_entry,
+    validate_material_parameters,
+)
 from .types import (
     Articulation,
     ArticulationType,
@@ -242,6 +247,12 @@ def _define_materials(
             continue
         token = _unique_identifier(material.name, used_names)
         path = Sdf.Path(f"{USD_ROOT_PATH}/{USD_LOOKS_SCOPE}/{token}")
+        if material.catalog:
+            entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+            validate_material_parameters(entry, material.parameters)
+            copy_catalog_material(stage, entry, path)
+            paths[material.name] = path
+            continue
         usd_material = UsdShade.Material.Define(stage, str(path))
         shader = UsdShade.Shader.Define(stage, str(path.AppendChild("Shader")))
         shader.CreateIdAttr("UsdPreviewSurface")

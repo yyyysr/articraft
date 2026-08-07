@@ -17,6 +17,7 @@ from agent.tools.base import (
 from agent.tools.compile_model import CompileModelTool
 from agent.tools.edit_code import ReplaceTool
 from agent.tools.find_examples import FindExamplesTool
+from agent.tools.find_materials import FindMaterialsTool
 from agent.tools.probe_model import ProbeModelTool
 from agent.tools.read_file import ReadFileTool
 from agent.tools.registry import ToolRegistry
@@ -109,6 +110,7 @@ def build_tool_registry(
     tools.append(
         FindExamplesTool(sdk_package=package, include_paths=provider_norm is ProviderName.OPENAI)
     )
+    tools.append(FindMaterialsTool())
     return ToolRegistry(tools)
 
 
@@ -227,6 +229,7 @@ __all__ = [
     "ApplyPatchJsonTool",
     "CompileModelTool",
     "FindExamplesTool",
+    "FindMaterialsTool",
     "ProbeModelTool",
     "ReadFileTool",
     "ReplaceTool",

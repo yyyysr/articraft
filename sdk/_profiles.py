@@ -63,6 +63,7 @@ _COMMON_DOCS = (
     Path("sdk/_docs/common/00_quickstart.md"),
     Path("sdk/_docs/common/10_errors.md"),
     Path("sdk/_docs/common/20_core_types.md"),
+    Path("sdk/_docs/common/25_material_catalogs.md"),
     Path("sdk/_docs/common/30_articulated_object.md"),
     Path("sdk/_docs/common/40_assets.md"),
     Path("sdk/_docs/common/50_placement.md"),
