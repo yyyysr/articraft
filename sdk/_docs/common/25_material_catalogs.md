@@ -9,7 +9,8 @@ prototypes, small details, or renderer-independent output.
 
 Do not inspect material USD files and do not guess catalog material names. Call
 `find_materials` with a short English appearance/use query. It returns a small set of
-valid `catalog` and `name` pairs with semantic descriptions.
+valid `catalog`, `id`, `name`, and `description` fields. Selection reads only
+this lightweight semantic index; texture paths and shader details remain hidden.
 
 ```text
 find_materials(query="brushed silver metal for an appliance shell", limit=5)
@@ -20,8 +21,8 @@ Choose the closest returned candidate. If none is appropriate, use an inline
 
 ## Bind A Catalog Material
 
-The model-local name remains under the author's control. The catalog pair must
-match a `find_materials` result exactly.
+The model-local name remains under the author's control. Use the exact catalog
+and material `id` returned by `find_materials`.
 
 ```python
 shell_finish = model.material(
@@ -32,6 +33,21 @@ shell_finish = model.material(
 
 shell.visual(shell_geometry, material=shell_finish, name="outer_shell")
 ```
+
+Texture-backed catalogs use the same API:
+
+```python
+wood_finish = model.material(
+    "wood_finish",
+    catalog="wood_furniture",
+    catalog_material="wood_001",
+)
+cabinet.visual(Box((0.8, 0.4, 0.02)), material=wood_finish, name="wood_panel")
+```
+
+Texture catalogs backed by locally installed assets are optional. If their
+texture root is absent, they are omitted from `find_materials` without affecting
+the built-in catalog. Install the catalog assets before using its ids.
 
 Material assignment remains per visual. Reuse one registered material for
 visuals that need the same finish, and use separate local materials when future
@@ -49,7 +65,9 @@ Catalog selection is an opt-in visual enhancement, not a compile requirement.
 
 ## Export Behavior
 
-- USD preserves the selected catalog shader graph and binds it to the visual.
+- USD preserves or builds the selected catalog shader graph and binds it to the visual.
+- Texture-backed materials are packaged beside `model.usd` under `textures/`;
+  USD references them with portable relative paths.
 - URDF cannot represent OpenPBR. It receives an approximate fallback color.
 - An inline `rgba` on a catalog material explicitly overrides the URDF fallback
   while USD still uses the catalog material.
@@ -58,12 +76,11 @@ Catalog selection is an opt-in visual enhancement, not a compile requirement.
 
 ## Textured Materials And UVs
 
-Future texture-backed catalogs may declare `requirements.uv: true` and expose
-validated parameters such as texture scale. Do not invent parameter names.
-Use only parameters returned or documented for that material. A visual without
-the required UV coordinates must use another material until suitable UVs are
-available. UV validation and parameter application are added together with the
-first texture-backed catalog; the current built-in catalog exposes neither.
+Texture-backed materials require UV coordinates. `Box` visuals receive a
+face-varying `st` layout automatically during USD export. Other primitives and
+meshes must already provide a supported UV path before using a texture-backed
+catalog. Do not invent texture parameters; use only parameters returned or
+documented for that material.
 
 ## Common Errors
 

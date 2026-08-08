@@ -1113,6 +1113,7 @@ class ArticraftAgent:
             final_code=final_code,
             urdf_xml=report.urdf_xml if report else None,
             usd_bytes=report.usd_bytes if report else None,
+            usd_assets=dict(report.usd_assets) if report else {},
             compile_warnings=self._compile_warnings_snapshot(),
             turn_count=turn_count,
             tool_call_count=tool_call_count,

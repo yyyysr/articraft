@@ -1,0 +1,8 @@
+id: wood_036
+dir: Wood036
+usd: Wood036_1K-PNG.usdc
+maps:
+  base_color: Wood036_1K-PNG_Color.png
+  roughness: Wood036_1K-PNG_Roughness.png
+  normal: Wood036_1K-PNG_NormalGL.png
+  displacement: Wood036_1K-PNG_Displacement.png

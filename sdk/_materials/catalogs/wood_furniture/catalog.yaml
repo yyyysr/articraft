@@ -1,0 +1,8 @@
+id: wood_furniture
+version: 1
+optional: true
+profile: texture_maps
+texture_root: ../../../../assets/textures/wood_furniture
+detail_pattern: materials/{id}.yaml
+preferred_normal_format: opengl
+usd_policy: optional_preview_surface

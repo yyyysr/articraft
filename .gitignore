@@ -228,6 +228,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Downloaded/local asset libraries, including large texture catalogs.
 assets/
 
 .npm-cache/

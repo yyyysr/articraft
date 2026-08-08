@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -20,6 +21,7 @@ from .geometry_qc import (
     compute_part_world_transforms,
 )
 from .material_catalog import (
+    catalog_texture_assets,
     copy_catalog_material,
     resolve_material_entry,
     validate_material_parameters,
@@ -80,6 +82,7 @@ def compile_object_to_usd_file(
 
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
+    _copy_catalog_textures(compiled_model, output.parent)
     author_path = output
     temporary_ascii: Path | None = None
     if binary and output.suffix.lower() == ".usd":
@@ -224,6 +227,23 @@ def compile_object_to_usd_bytes(
     validate: bool = True,
 ) -> bytes:
     """Compile an object model and return compact model.usd bytes."""
+    usd_bytes, _assets = compile_object_to_usd_package(
+        object_model,
+        asset_root=asset_root,
+        include_physical_collisions=include_physical_collisions,
+        validate=validate,
+    )
+    return usd_bytes
+
+
+def compile_object_to_usd_package(
+    object_model: ArticulatedObject,
+    *,
+    asset_root: object = None,
+    include_physical_collisions: bool = True,
+    validate: bool = True,
+) -> tuple[bytes, dict[str, bytes]]:
+    """Compile model.usd and return its relative texture payloads."""
     with tempfile.TemporaryDirectory(prefix="articraft-usd-") as tmp:
         path = Path(tmp) / "model.usd"
         compile_object_to_usd_file(
@@ -233,7 +253,28 @@ def compile_object_to_usd_bytes(
             include_physical_collisions=include_physical_collisions,
             validate=validate,
         )
-        return path.read_bytes()
+        assets = {
+            file.relative_to(tmp).as_posix(): file.read_bytes()
+            for file in (Path(tmp) / "textures").glob("*.png")
+        }
+        return path.read_bytes(), assets
+
+
+def _copy_catalog_textures(model: ArticulatedObject, output_dir: Path) -> None:
+    assets: dict[str, Path] = {}
+    for material in _iter_materials(model):
+        if not material.catalog:
+            continue
+        entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+        for relative_path, source in catalog_texture_assets(entry).items():
+            previous = assets.get(relative_path)
+            if previous is not None and previous != source:
+                raise ValidationError(f"Catalog texture filename collision: {relative_path}")
+            assets[relative_path] = source
+    for relative_path, source in assets.items():
+        destination = output_dir / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
 
 
 def _define_materials(
@@ -309,6 +350,18 @@ def _define_geometry_prim(
     if isinstance(geometry, Box):
         prim = UsdGeom.Cube.Define(stage, str(path))
         prim.CreateSizeAttr(1.0)
+        st = UsdGeom.PrimvarsAPI(prim).CreatePrimvar(
+            "st",
+            Sdf.ValueTypeNames.TexCoord2fArray,
+            UsdGeom.Tokens.faceVarying,
+        )
+        face_uvs = [
+            Gf.Vec2f(0.0, 0.0),
+            Gf.Vec2f(1.0, 0.0),
+            Gf.Vec2f(1.0, 1.0),
+            Gf.Vec2f(0.0, 1.0),
+        ]
+        st.Set(Vt.Vec2fArray(face_uvs * 6))
         transform = _mat4_mul(
             _origin_to_mat4(origin),
             _scale_mat4(tuple(float(value) for value in geometry.size)),
@@ -595,4 +648,8 @@ def _ascii_identifier(raw_name: str) -> str:
     return "_".join(text.split()).strip("_") or "prim"
 
 
-__all__ = ["compile_object_to_usd_bytes", "compile_object_to_usd_file"]
+__all__ = [
+    "compile_object_to_usd_bytes",
+    "compile_object_to_usd_file",
+    "compile_object_to_usd_package",
+]

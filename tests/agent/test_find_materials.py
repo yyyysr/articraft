@@ -13,6 +13,12 @@ def test_material_search_finds_semantic_openpbr_candidates() -> None:
     assert all(match.entry.name != "Copper Brushed" for match in matches)
 
 
+def test_material_search_selects_wood_from_lightweight_index() -> None:
+    matches = search_materials("pale wood with dark knots", catalog="wood_furniture", limit=3)
+    assert matches
+    assert matches[0].entry.material_id == "wood_031"
+
+
 def test_find_materials_tool_returns_semantics_without_usd_internals() -> None:
     async def run() -> object:
         invocation = await FindMaterialsTool().build({"query": "clear glass window", "limit": 3})
@@ -24,6 +30,7 @@ def test_find_materials_tool_returns_semantics_without_usd_internals() -> None:
     first = result.output[0]
     assert set(first) == {
         "catalog",
+        "id",
         "name",
         "description",
         "profile",

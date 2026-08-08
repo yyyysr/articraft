@@ -228,7 +228,7 @@ model.material(
 - A 3-tuple color is expanded to `(r, g, b, 1.0)`.
 - `catalog` and `catalog_material` opt into a searchable material catalog. Set
   both together; ordinary `rgba` and `texture` materials remain supported.
-- Use `find_materials` before authoring a catalog material name. Read
+- Use `find_materials` before authoring a catalog material id. Read
   `docs/sdk/references/material-catalogs.md` for the catalog workflow.
 
 ## Lookup Helpers

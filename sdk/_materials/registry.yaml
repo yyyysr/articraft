@@ -3,3 +3,6 @@ catalogs:
   - id: builtin_openpbr
     metadata: catalogs/builtin_openpbr/catalog.yaml
     manifest: catalogs/builtin_openpbr/materials.yaml
+  - id: wood_furniture
+    metadata: catalogs/wood_furniture/catalog.yaml
+    manifest: catalogs/wood_furniture/index.yaml

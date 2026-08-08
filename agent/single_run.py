@@ -418,6 +418,7 @@ async def execute_single_run(
             logger.info("Total cost: $%.6f", logged_cost)
 
     usd_bytes = result.usd_bytes
+    usd_assets = dict(result.usd_assets)
     if result.urdf_xml is not None and usd_bytes is not None:
         urdf_xml = result.urdf_xml
         compile_warnings = list(result.compile_warnings)
@@ -433,6 +434,7 @@ async def execute_single_run(
                 logger.warning("%s", warning)
             urdf_xml = report.urdf_xml
             usd_bytes = report.usd_bytes
+            usd_assets = dict(report.usd_assets)
             compile_warnings = list(report.warnings)
         except Exception as exc:
             logger.error("Failed to compile final URDF/USD artifacts: %s", exc)
@@ -477,6 +479,7 @@ async def execute_single_run(
             final_code=final_code,
             urdf_xml=urdf_xml,
             usd_bytes=usd_bytes,
+            usd_assets=usd_assets,
             compile_warnings=compile_warnings,
             turn_count=result.turn_count,
             tool_call_count=result.tool_call_count,

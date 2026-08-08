@@ -16,11 +16,15 @@ _DEFAULT_CATALOG_ROOT = Path(__file__).resolve().parents[2] / "_materials"
 @dataclass(frozen=True)
 class MaterialCatalogEntry:
     catalog_id: str
+    material_id: str
     name: str
     description: str
-    binding: str
-    library_path: Path
+    binding: str | None
+    library_path: Path | None
     profile: str
+    texture_paths: Mapping[str, Path] = field(default_factory=dict)
+    texture_dir: str | None = None
+    usd_path: Path | None = None
     tags: tuple[str, ...] = ()
     aliases: tuple[str, ...] = ()
     requirements: Mapping[str, Any] = field(default_factory=dict)
@@ -50,6 +54,22 @@ def _relative_file(base: Path, value: object, *, field_name: str) -> Path:
         candidate.relative_to(base.resolve())
     except ValueError as exc:
         raise ValidationError(f"{field_name} must stay inside its catalog package") from exc
+    return candidate
+
+
+def _relative_asset(base: Path, value: object, *, field_name: str) -> Path:
+    text = str(value or "").strip()
+    if not text:
+        raise ValidationError(f"{field_name} is required")
+    candidate = (base / text).resolve()
+    try:
+        candidate.relative_to(base.resolve())
+    except ValueError as exc:
+        raise ValidationError(
+            f"{field_name} must stay inside its material asset directory"
+        ) from exc
+    if not candidate.is_file():
+        raise ValidationError(f"{field_name} not found: {candidate}")
     return candidate
 
 
@@ -96,13 +116,29 @@ def _load_material_entries_cached(catalog_root_text: str) -> tuple[MaterialCatal
             raise ValidationError(f"Material catalog metadata id does not match {catalog_id!r}")
 
         library_value = metadata.get("library") or manifest.get("library_path")
-        library_path = _relative_file(
-            metadata_path.parent,
-            library_value,
-            field_name=f"catalog {catalog_id!r} library",
+        library_path: Path | None = None
+        if library_value:
+            library_path = _relative_file(
+                metadata_path.parent,
+                library_value,
+                field_name=f"catalog {catalog_id!r} library",
+            )
+            if not library_path.is_file():
+                raise ValidationError(f"Material catalog library not found: {library_path}")
+
+        detail_pattern = str(metadata.get("detail_pattern") or "").strip()
+        texture_root_value = str(metadata.get("texture_root") or "").strip()
+        texture_root = (
+            (metadata_path.parent / texture_root_value).resolve() if texture_root_value else None
         )
-        if not library_path.is_file():
-            raise ValidationError(f"Material catalog library not found: {library_path}")
+        if detail_pattern and (texture_root is None or not texture_root.is_dir()):
+            if bool(metadata.get("optional")):
+                continue
+            raise ValidationError(f"Material catalog texture root not found: {texture_root}")
+        if not library_path and not detail_pattern:
+            raise ValidationError(
+                f"Material catalog {catalog_id!r} must define library or detail_pattern"
+            )
 
         disabled: dict[str, str] = {}
         for item in metadata.get("disabled_entries") or []:
@@ -114,26 +150,92 @@ def _load_material_entries_cached(catalog_root_text: str) -> tuple[MaterialCatal
         if not isinstance(raw_entries, list):
             raise ValidationError(f"Material catalog {catalog_id!r} entries must be a list")
         seen_names: set[str] = set()
+        seen_ids: set[str] = set()
         for raw_entry in raw_entries:
             if not isinstance(raw_entry, dict):
                 raise ValidationError(f"Material catalog {catalog_id!r} entry must be a mapping")
             name = str(raw_entry.get("name") or "").strip()
-            binding = str(raw_entry.get("binding") or "").strip()
-            if not name or not binding or name in seen_names:
+            material_id = str(raw_entry.get("id") or name).strip()
+            binding = str(raw_entry.get("binding") or "").strip() or None
+            if not name or not material_id or name in seen_names or material_id in seen_ids:
                 raise ValidationError(
                     f"Invalid or duplicate material entry {name!r} in catalog {catalog_id!r}"
                 )
-            if not Sdf.Path(binding).IsAbsolutePath():
+            if binding and not Sdf.Path(binding).IsAbsolutePath():
                 raise ValidationError(f"Material binding must be an absolute USD path: {binding}")
+            if bool(binding) != bool(library_path):
+                raise ValidationError(
+                    f"Material entry {catalog_id!r}/{name!r} must match its catalog library"
+                )
+
+            texture_paths: dict[str, Path] = {}
+            texture_dir: str | None = None
+            usd_path: Path | None = None
+            if detail_pattern:
+                try:
+                    detail_relative = detail_pattern.format(id=material_id)
+                except (KeyError, ValueError) as exc:
+                    raise ValidationError(
+                        f"Invalid detail_pattern for catalog {catalog_id!r}"
+                    ) from exc
+                detail_path = _relative_file(
+                    metadata_path.parent,
+                    detail_relative,
+                    field_name=f"material {catalog_id!r}/{material_id!r} detail",
+                )
+                detail = _load_yaml(detail_path)
+                if str(detail.get("id") or "").strip() != material_id:
+                    raise ValidationError(
+                        f"Material detail id does not match {catalog_id!r}/{material_id!r}"
+                    )
+                texture_dir = str(detail.get("dir") or "").strip()
+                asset_dir = (texture_root / texture_dir).resolve()  # type: ignore[operator]
+                try:
+                    asset_dir.relative_to(texture_root)  # type: ignore[arg-type]
+                except ValueError as exc:
+                    raise ValidationError(
+                        f"Material directory must stay inside texture_root: {texture_dir}"
+                    ) from exc
+                raw_maps = detail.get("maps")
+                if not isinstance(raw_maps, dict) or "base_color" not in raw_maps:
+                    raise ValidationError(
+                        f"Material detail {catalog_id!r}/{material_id!r} requires maps.base_color"
+                    )
+                supported_maps = {"base_color", "roughness", "normal", "displacement"}
+                unsupported_maps = sorted(set(raw_maps) - supported_maps)
+                if unsupported_maps:
+                    raise ValidationError(
+                        f"Unsupported texture maps for {catalog_id!r}/{material_id!r}: "
+                        f"{', '.join(unsupported_maps)}"
+                    )
+                texture_paths = {
+                    str(map_name): _relative_asset(
+                        asset_dir,
+                        map_file,
+                        field_name=f"material {catalog_id!r}/{material_id!r} map {map_name!r}",
+                    )
+                    for map_name, map_file in raw_maps.items()
+                }
+                if detail.get("usd"):
+                    usd_path = _relative_asset(
+                        asset_dir,
+                        detail["usd"],
+                        field_name=f"material {catalog_id!r}/{material_id!r} usd",
+                    )
             seen_names.add(name)
+            seen_ids.add(material_id)
             entries.append(
                 MaterialCatalogEntry(
                     catalog_id=catalog_id,
+                    material_id=material_id,
                     name=name,
                     description=str(raw_entry.get("description") or "").strip(),
                     binding=binding,
                     library_path=library_path,
                     profile=str(metadata.get("profile") or "").strip(),
+                    texture_paths=texture_paths,
+                    texture_dir=texture_dir,
+                    usd_path=usd_path,
                     tags=_string_tuple(raw_entry.get("tags")),
                     aliases=_string_tuple(raw_entry.get("aliases")),
                     requirements=dict(raw_entry.get("requirements") or {}),
@@ -165,7 +267,7 @@ def resolve_material_entry(
     catalog_key = str(catalog_id).strip()
     material_key = str(material_name).strip()
     for entry in load_material_entries(catalog_root=catalog_root, include_disabled=True):
-        if entry.catalog_id == catalog_key and entry.name == material_key:
+        if entry.catalog_id == catalog_key and material_key in {entry.name, entry.material_id}:
             if entry.disabled_reason:
                 raise ValidationError(
                     f"Catalog material {catalog_key}/{material_key} is unavailable: "
@@ -193,6 +295,12 @@ def copy_catalog_material(
     entry: MaterialCatalogEntry,
     target_path: Sdf.Path,
 ) -> UsdShade.Material:
+    if entry.texture_paths:
+        return _define_texture_material(stage, entry, target_path)
+    if entry.library_path is None or entry.binding is None:
+        raise ValidationError(
+            f"Catalog material has no usable implementation: {entry.catalog_id}/{entry.name}"
+        )
     source_layer = Sdf.Layer.FindOrOpen(str(entry.library_path))
     if source_layer is None or source_layer.GetPrimAtPath(entry.binding) is None:
         raise ValidationError(
@@ -212,6 +320,68 @@ def copy_catalog_material(
         entry.name
     )
     return material
+
+
+def _texture_asset_path(entry: MaterialCatalogEntry, source: Path) -> str:
+    return f"textures/{source.name}"
+
+
+def _define_texture_material(
+    stage: Usd.Stage,
+    entry: MaterialCatalogEntry,
+    target_path: Sdf.Path,
+) -> UsdShade.Material:
+    material = UsdShade.Material.Define(stage, target_path)
+    shader = UsdShade.Shader.Define(stage, target_path.AppendChild("Shader"))
+    shader.CreateIdAttr("UsdPreviewSurface")
+    shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.55)
+    shader.CreateOutput("surface", Sdf.ValueTypeNames.Token)
+    material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+
+    texcoord = UsdShade.Shader.Define(stage, target_path.AppendChild("TextureCoordinateReader"))
+    texcoord.CreateIdAttr("UsdPrimvarReader_float2")
+    texcoord.CreateInput("varname", Sdf.ValueTypeNames.Token).Set("st")
+    texcoord.CreateOutput("result", Sdf.ValueTypeNames.Float2)
+
+    map_specs = {
+        "base_color": ("diffuseColor", "rgb", Sdf.ValueTypeNames.Color3f, "sRGB"),
+        "roughness": ("roughness", "r", Sdf.ValueTypeNames.Float, "raw"),
+        "normal": ("normal", "rgb", Sdf.ValueTypeNames.Normal3f, "raw"),
+        "displacement": ("displacement", "r", Sdf.ValueTypeNames.Float, "raw"),
+    }
+    for map_name, source in entry.texture_paths.items():
+        input_name, output_name, value_type, color_space = map_specs[map_name]
+        texture = UsdShade.Shader.Define(stage, target_path.AppendChild(map_name))
+        texture.CreateIdAttr("UsdUVTexture")
+        texture.CreateInput("file", Sdf.ValueTypeNames.Asset).Set(
+            Sdf.AssetPath(_texture_asset_path(entry, source))
+        )
+        texture.CreateInput("sourceColorSpace", Sdf.ValueTypeNames.Token).Set(color_space)
+        texture.CreateInput("wrapS", Sdf.ValueTypeNames.Token).Set("repeat")
+        texture.CreateInput("wrapT", Sdf.ValueTypeNames.Token).Set("repeat")
+        texture.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(
+            texcoord.ConnectableAPI(), "result"
+        )
+        if map_name == "normal":
+            texture.CreateInput("bias", Sdf.ValueTypeNames.Float4).Set((-1.0, -1.0, -1.0, 0.0))
+            texture.CreateInput("scale", Sdf.ValueTypeNames.Float4).Set((2.0, 2.0, 2.0, 1.0))
+        texture.CreateOutput(output_name, value_type)
+        shader.CreateInput(input_name, value_type).ConnectToSource(
+            texture.ConnectableAPI(), output_name
+        )
+
+    material.GetPrim().CreateAttribute("articraft:catalog", Sdf.ValueTypeNames.String).Set(
+        entry.catalog_id
+    )
+    material.GetPrim().CreateAttribute("articraft:catalogMaterial", Sdf.ValueTypeNames.String).Set(
+        entry.material_id
+    )
+    return material
+
+
+def catalog_texture_assets(entry: MaterialCatalogEntry) -> dict[str, Path]:
+    return {_texture_asset_path(entry, source): source for source in entry.texture_paths.values()}
 
 
 @lru_cache(maxsize=256)
@@ -249,11 +419,16 @@ def _catalog_fallback_rgba_cached(
 
 
 def catalog_fallback_rgba(entry: MaterialCatalogEntry) -> tuple[float, float, float, float]:
+    if "base_color" in entry.texture_paths:
+        return (0.55, 0.4, 0.25, 1.0)
+    if entry.library_path is None or entry.binding is None:
+        return (0.8, 0.8, 0.8, 1.0)
     return _catalog_fallback_rgba_cached(str(entry.library_path), entry.binding)
 
 
 __all__ = [
     "MaterialCatalogEntry",
+    "catalog_texture_assets",
     "catalog_fallback_rgba",
     "copy_catalog_material",
     "load_material_entries",

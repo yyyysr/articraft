@@ -27,6 +27,7 @@ class AgentResult:
     final_code: str | None = None
     urdf_xml: str | None = None
     usd_bytes: bytes | None = None
+    usd_assets: dict[str, bytes] = field(default_factory=dict)
     compile_warnings: list[str] = field(default_factory=list)
     turn_count: int = 0
     tool_call_count: int = 0
@@ -117,6 +118,7 @@ class CompileReport:
     warnings: list[str]
     signal_bundle: CompileSignalBundle
     usd_bytes: bytes | None = None
+    usd_assets: dict[str, bytes] = field(default_factory=dict)
 
 
 @dataclass(slots=True, frozen=True)

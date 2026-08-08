@@ -176,6 +176,7 @@ def materialization_paths(repo: StorageRepo, record_id: str) -> dict[str, Path]:
         "model_usd": repo.layout.record_materialization_usd_path(record_id),
         "compile_report_json": repo.layout.record_materialization_compile_report_path(record_id),
         "assets_dir": repo.layout.record_materialization_assets_dir(record_id),
+        "textures_dir": repo.layout.record_materialization_textures_dir(record_id),
         "meshes_dir": repo.layout.record_materialization_asset_meshes_dir(record_id),
         "glb_dir": repo.layout.record_materialization_asset_glb_dir(record_id),
         "viewer_dir": repo.layout.record_materialization_asset_viewer_dir(record_id),

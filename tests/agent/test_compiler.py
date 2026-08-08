@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from agent.compiler import compile_urdf_report, persist_compile_success_artifacts, update_manifest
+from agent.compiler import (
+    compile_urdf_report,
+    compile_urdf_report_maybe_timeout,
+    persist_compile_success_artifacts,
+    update_manifest,
+)
 from agent.runner import compile_urdf
 
 _REMOVED_PACKAGE = "_".join(("sdk", "hybrid"))
@@ -149,6 +154,7 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
         urdf_xml="<robot name='sample'/>",
         urdf_out=urdf_path,
         usd_bytes=b"PXR-USDC sample",
+        usd_assets={"textures/Wood001_1K-PNG_Color.png": b"png-data"},
         usd_out=usd_path,
         outputs_root=outputs_root,
     )
@@ -156,6 +162,7 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
     assert sig is not None
     assert urdf_path.read_text(encoding="utf-8") == "<robot name='sample'/>"
     assert usd_path.read_bytes() == b"PXR-USDC sample"
+    assert (run_dir / "textures" / "Wood001_1K-PNG_Color.png").read_bytes() == b"png-data"
 
     manifest = json.loads((outputs_root / "manifest.json").read_text(encoding="utf-8"))
     assert manifest == {
@@ -171,6 +178,7 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
         urdf_xml="<robot name='sample'/>",
         urdf_out=urdf_path,
         usd_bytes=b"PXR-USDC sample",
+        usd_assets={"textures/Wood001_1K-PNG_Color.png": b"png-data"},
         usd_out=usd_path,
         outputs_root=outputs_root,
         previous_sig=sig,
@@ -198,6 +206,33 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
     }
 
     assert callable(compile_urdf)
+
+
+def test_compile_report_carries_only_used_catalog_textures(tmp_path: Path) -> None:
+    script_path = tmp_path / "model.py"
+    script_path.write_text(
+        "\n".join(
+            [
+                "from sdk import ArticulatedObject, Box",
+                "object_model = ArticulatedObject(name='wood_panel')",
+                "finish = object_model.material(",
+                "    'wood_finish', catalog='wood_furniture', catalog_material='wood_001'",
+                ")",
+                "object_model.part('body').visual(Box((0.4, 0.3, 0.2)), material=finish)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = compile_urdf_report_maybe_timeout(script_path, run_checks=False)
+
+    assert report.usd_bytes
+    assert set(report.usd_assets) == {
+        "textures/Wood001_1K-PNG_Color.png",
+        "textures/Wood001_1K-PNG_Displacement.png",
+        "textures/Wood001_1K-PNG_NormalGL.png",
+        "textures/Wood001_1K-PNG_Roughness.png",
+    }
 
 
 def test_compile_urdf_report_can_skip_required_checks(tmp_path: Path) -> None:

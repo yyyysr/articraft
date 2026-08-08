@@ -55,18 +55,11 @@ def search_materials(
     if not query_tokens or limit < 1:
         return []
     index = load_material_search_index()
-    candidates = [
-        position
-        for position, entry in enumerate(index.entries)
-        if catalog is None or entry.catalog_id == catalog
-    ]
-    if not candidates:
+    if catalog is not None and not any(entry.catalog_id == catalog for entry in index.entries):
         return []
-    candidate_k = min(len(candidates), max(limit * 4, 12))
     retrieval = index.retriever.retrieve(
         [query_tokens],
-        k=candidate_k,
-        corpus=candidates,
+        k=len(index.entries),
         show_progress=False,
     )
     matches: list[MaterialSearchMatch] = []
@@ -75,6 +68,8 @@ def search_materials(
         if score <= 0:
             continue
         entry = index.entries[int(raw_index)]
+        if catalog is not None and entry.catalog_id != catalog:
+            continue
         entry_text = " ".join([entry.name, entry.description, *entry.tags, *entry.aliases]).lower()
         matched_count = sum(token in entry_text for token in set(query_tokens))
         quality = "strong" if matched_count >= min(2, len(set(query_tokens))) else "weak"

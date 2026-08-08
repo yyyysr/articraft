@@ -40,6 +40,7 @@ class FindMaterialsInvocation(BaseToolInvocation[FindMaterialsParams, list[dict[
             output=[
                 {
                     "catalog": match.entry.catalog_id,
+                    "id": match.entry.material_id,
                     "name": match.entry.name,
                     "description": match.entry.description,
                     "profile": match.entry.profile,
@@ -57,8 +58,8 @@ class FindMaterialsTool(BaseDeclarativeTool):
             name="find_materials",
             description=(
                 "Search the installed visual-material catalogs by appearance or intended use. "
-                "Returns a small set of valid catalog/name pairs and descriptions. Use the exact "
-                "returned identifiers in model.material(...); do not invent catalog names. This "
+                "Returns a small set of valid catalog/id pairs, names, and descriptions. Use the exact "
+                "returned catalog and id in model.material(...); do not invent identifiers. This "
                 "tool does not expose USD shader paths or read the material USD."
             ),
             parameters={

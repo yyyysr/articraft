@@ -7,12 +7,13 @@ from __future__ import annotations
 import shutil
 import sys
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from agent.compiler import (
     _should_rewrite_visual_meshes_to_glb,
+    persist_usd_assets,
     rewrite_visual_meshes_to_glb,
 )
 from agent.defaults import resolve_max_turns
@@ -324,6 +325,7 @@ class SuccessRecordWrite:
     label: str | None
     tags: list[str]
     category_slug: str | None
+    usd_assets: dict[str, bytes] = field(default_factory=dict)
     prompt_index: int | None = None
     existing_record: dict | None = None
     record_author: str | None = None
@@ -572,6 +574,7 @@ def write_success_record(
     final_code = request.final_code
     urdf_xml = request.urdf_xml
     usd_bytes = request.usd_bytes
+    usd_assets = request.usd_assets
     compile_warnings = request.compile_warnings
     turn_count = request.turn_count
     tool_call_count = request.tool_call_count
@@ -612,6 +615,7 @@ def write_success_record(
         usd_path = storage_repo.layout.record_materialization_usd_path(context.record_id)
         usd_path.parent.mkdir(parents=True, exist_ok=True)
         usd_path.write_bytes(bytes(usd_bytes))
+        persist_usd_assets(usd_assets, usd_path.parent)
     system_prompt_sha = _ensure_shared_system_prompt(storage_repo, system_prompt_path)
 
     for stale_file in ("model.urdf", "model.usd", "compile_report.json"):

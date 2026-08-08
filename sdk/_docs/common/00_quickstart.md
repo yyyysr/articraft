@@ -82,7 +82,7 @@ falling back to the low-level mesh page.
 Read the exact document you need. Do not guess helper names or signatures from memory.
 
 When a named realistic surface finish would materially improve the object, call
-`find_materials` and use an exact returned catalog/name pair. Do not read the
+`find_materials` and use the exact returned catalog/id pair. Do not read the
 material USD and do not invent catalog names. Catalog use is optional: retain
 ordinary `rgba` or `texture` materials when they are adequate. Read
 `docs/sdk/references/material-catalogs.md` only when using this workflow.
