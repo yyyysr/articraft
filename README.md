@@ -45,6 +45,30 @@ uv run articraft library check --require-records
 
 You can also pass any data folder explicitly with `--data-dir`.
 
+### Optional Texture Catalog Assets
+
+The optional AmbientCG texture downloader is maintained inside Articraft,
+separate from the GenScene application scripts. From this directory, preview
+the curated wood set with:
+
+```bash
+python scripts/download_texture.py --dry-run
+```
+
+Download the selected 1K-PNG assets into
+`assets/textures/wood_furniture/` with:
+
+```bash
+python scripts/download_texture.py
+```
+
+The source CSV is kept beside the script at
+`scripts/ambientCG_downloads_csv.csv`. Use `--asset-id` to select specific
+assets, `--attribute` to choose another available download variant, or
+`--output-dir` to override the catalog texture root. The downloaded files are
+optional and are consumed by the `wood_furniture` material catalog; the core
+Articraft SDK and GenScene do not require them.
+
 ### 3. Add API Keys
 Open `.env` and set one or more provider keys (e.g. `OPENAI_API_KEY`, `GEMINI_API_KEYS`, `ANTHROPIC_API_KEYS`, `DASHSCOPE_API_KEY`).
 
