@@ -335,8 +335,33 @@ class MotionLimits:
 
 @dataclass(frozen=True)
 class MotionProperties:
+    """Passive joint dynamics in SI units.
+
+    ``damping`` is viscous damping (N*m*s/rad for angular joints and N*s/m
+    for linear joints). ``friction`` is Coulomb friction (N*m for angular
+    joints and N for linear joints). ``None`` means unspecified; ``0.0`` is an
+    explicit frictionless or undamped joint.
+    """
+
     damping: Optional[float] = None
     friction: Optional[float] = None
+    stiffness: Optional[float] = None
+    equilibrium: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        for name in ("damping", "friction", "stiffness"):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            normalized = float(value)
+            if not math.isfinite(normalized) or normalized < 0.0:
+                raise ValidationError(f"motion_properties.{name} must be finite and non-negative")
+            object.__setattr__(self, name, normalized)
+        if self.equilibrium is not None:
+            equilibrium = float(self.equilibrium)
+            if not math.isfinite(equilibrium):
+                raise ValidationError("motion_properties.equilibrium must be finite")
+            object.__setattr__(self, "equilibrium", equilibrium)
 
 
 @dataclass(frozen=True)

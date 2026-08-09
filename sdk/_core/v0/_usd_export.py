@@ -138,6 +138,9 @@ def compile_object_to_usd_file(
         body.GetPrim().CreateAttribute("articraft:partName", Sdf.ValueTypeNames.String).Set(
             part.name
         )
+        body.GetPrim().CreateAttribute(
+            "articraft:physicsMaterialSource", Sdf.ValueTypeNames.Token
+        ).Set("explicit" if part.physics_material is not None else "generic_default")
         inertial, inertial_source = resolve_part_inertial(part, asset_root=resolved_assets)
         _apply_rigid_body(body, inertial=inertial, source=inertial_source)
 
@@ -479,6 +482,9 @@ def _physics_material_path_for_part(
     physics_api.CreateStaticFrictionAttr(float(material.static_friction))
     physics_api.CreateDynamicFrictionAttr(float(material.dynamic_friction))
     physics_api.CreateRestitutionAttr(float(material.restitution))
+    physics_api.CreateDensityAttr(float(material.density))
+    # Preserve the legacy attribute for consumers that used Articraft USDs
+    # before density was authored through the standard MaterialAPI schema.
     usd_material.GetPrim().CreateAttribute("articraft:density", Sdf.ValueTypeNames.Float).Set(
         float(material.density)
     )
@@ -537,6 +543,69 @@ def _define_joint(
     joint.GetPrim().CreateAttribute("articraft:jointName", Sdf.ValueTypeNames.String).Set(
         articulation.name
     )
+    _apply_joint_motion_properties(joint.GetPrim(), articulation)
+
+
+def _apply_joint_motion_properties(prim: Usd.Prim, articulation: Articulation) -> None:
+    properties = articulation.motion_properties
+    if properties is None:
+        return
+
+    if properties.friction is not None:
+        # OpenUSD Physics has no engine-neutral Coulomb joint-friction field.
+        # Keep the authored intent available without introducing PhysxSchema.
+        prim.CreateAttribute("articraft:jointFriction", Sdf.ValueTypeNames.Float).Set(
+            float(properties.friction)
+        )
+
+    if properties.stiffness is not None:
+        prim.CreateAttribute("articraft:jointStiffness", Sdf.ValueTypeNames.Float).Set(
+            float(properties.stiffness)
+        )
+    if properties.equilibrium is not None:
+        prim.CreateAttribute("articraft:jointEquilibrium", Sdf.ValueTypeNames.Float).Set(
+            float(properties.equilibrium)
+        )
+
+    if (
+        properties.damping is None
+        and properties.stiffness is None
+        and properties.equilibrium is None
+    ):
+        return
+
+    if articulation.articulation_type in {
+        ArticulationType.REVOLUTE,
+        ArticulationType.CONTINUOUS,
+    }:
+        drive_name = UsdPhysics.Tokens.angular
+        # Articraft/URDF angular damping is torque per radian/second, while
+        # angular DriveAPI position and velocity values are degree based.
+        damping = 0.0 if properties.damping is None else float(properties.damping) * math.pi / 180.0
+        stiffness = (
+            0.0 if properties.stiffness is None else float(properties.stiffness) * math.pi / 180.0
+        )
+        target_position = (
+            0.0
+            if properties.equilibrium is None
+            else float(properties.equilibrium) * 180.0 / math.pi
+        )
+    elif articulation.articulation_type == ArticulationType.PRISMATIC:
+        drive_name = UsdPhysics.Tokens.linear
+        damping = 0.0 if properties.damping is None else float(properties.damping)
+        stiffness = 0.0 if properties.stiffness is None else float(properties.stiffness)
+        target_position = 0.0 if properties.equilibrium is None else float(properties.equilibrium)
+    else:
+        return
+
+    drive = UsdPhysics.DriveAPI.Apply(prim, drive_name)
+    drive.CreateTypeAttr(UsdPhysics.Tokens.force)
+    drive.CreateStiffnessAttr(stiffness)
+    drive.CreateDampingAttr(damping)
+    drive.CreateTargetPositionAttr(target_position)
+    drive.CreateTargetVelocityAttr(0.0)
+    if articulation.motion_limits is not None:
+        drive.CreateMaxForceAttr(float(articulation.motion_limits.effort))
 
 
 def _angular_limits_degrees(

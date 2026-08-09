@@ -221,6 +221,8 @@ def _serialize_object_model(object_model: "ArticulatedObject") -> dict[str, obje
                     else {
                         "damping": articulation.motion_properties.damping,
                         "friction": articulation.motion_properties.friction,
+                        "stiffness": articulation.motion_properties.stiffness,
+                        "equilibrium": articulation.motion_properties.equilibrium,
                     }
                 ),
                 "mimic": (
