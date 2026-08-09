@@ -6,14 +6,49 @@ from pathlib import Path
 import pytest
 
 from agent.compiler import (
+    _physics_authoring_warnings,
     compile_urdf_report,
     compile_urdf_report_maybe_timeout,
     persist_compile_success_artifacts,
     update_manifest,
 )
 from agent.runner import compile_urdf
+from sdk import ArticulatedObject, ArticulationType, MotionLimits, MotionProperties, PhysicsMaterial
 
 _REMOVED_PACKAGE = "_".join(("sdk", "hybrid"))
+
+
+def test_physics_authoring_warnings_report_only_implicit_fallbacks() -> None:
+    model = ArticulatedObject(name="physics_warnings")
+    base = model.part("base")
+    free_door = model.part("free_door")
+    damped_door = model.part("damped_door", physics_material=PhysicsMaterial("wood"))
+    model.articulation(
+        "free_hinge",
+        ArticulationType.REVOLUTE,
+        parent=base,
+        child=free_door,
+        motion_limits=MotionLimits(lower=0.0, upper=1.0),
+    )
+    model.articulation(
+        "damped_hinge",
+        ArticulationType.REVOLUTE,
+        parent=base,
+        child=damped_door,
+        motion_limits=MotionLimits(lower=0.0, upper=1.0),
+        motion_properties=MotionProperties(damping=0.0, friction=0.0),
+    )
+
+    warnings = _physics_authoring_warnings({"object_model": model})
+
+    assert len(warnings) == 2
+    assert "2 part(s) use the generic PhysicsMaterial fallback" in warnings[0]
+    assert "'base'" in warnings[0]
+    assert "'free_door'" in warnings[0]
+    assert "damped_door" not in warnings[0]
+    assert "1 movable joint(s) have no MotionProperties" in warnings[1]
+    assert "free_hinge" in warnings[1]
+    assert "damped_hinge" not in warnings[1]
 
 
 def _write_isolated_part_model_script(
@@ -473,7 +508,7 @@ def test_compile_urdf_report_preserves_run_test_warnings_on_success(tmp_path: Pa
     report = compile_urdf_report(script_path, run_checks=True, target="full")
 
     assert "<robot" in report.urdf_xml
-    assert report.warnings == ["custom non-blocking warning"]
+    assert "custom non-blocking warning" in report.warnings
     assert report.signal_bundle.status == "success"
 
 
@@ -512,10 +547,14 @@ def test_compile_urdf_report_preserves_disconnected_geometry_warnings_on_success
 
     assert "<robot" in report.urdf_xml
     assert report.signal_bundle.status == "success"
-    assert report.warnings == [
-        "warn_if_part_contains_disconnected_geometry_islands(tol=1e-06): "
-        "Disconnected geometry islands detected:\npart='controls' connected=1/19"
-    ]
+    assert any(
+        warning
+        == (
+            "warn_if_part_contains_disconnected_geometry_islands(tol=1e-06): "
+            "Disconnected geometry islands detected:\npart='controls' connected=1/19"
+        )
+        for warning in report.warnings
+    )
 
 
 def test_compile_urdf_report_keeps_disconnected_geometry_as_warning_with_isolated_part_allowance(

@@ -174,6 +174,7 @@ _DOC_PATH_ALIASES = {
     "sdk/_docs/common/20_core_types.md": "references/core-types.md",
     "sdk/_docs/common/25_material_catalogs.md": "references/material-catalogs.md",
     "sdk/_docs/common/30_articulated_object.md": "references/articulated-object.md",
+    "sdk/_docs/common/35_physics_parameters.md": "references/physics-parameters.md",
     "sdk/_docs/common/40_assets.md": "references/assets.md",
     "sdk/_docs/common/50_placement.md": "references/placement.md",
     "sdk/_docs/common/70_probe_tooling.md": "references/probe-tooling.md",

@@ -30,6 +30,7 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
     assert "Aluminum Brushed" not in preloaded
     assert "materials_libs_v2" not in preloaded
     assert "docs/sdk/references/assets.md" in bundle.files_by_path
+    assert "docs/sdk/references/physics-parameters.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/mesh-geometry.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/panels-and-grilles.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/knobs-and-controls.md" in bundle.files_by_path

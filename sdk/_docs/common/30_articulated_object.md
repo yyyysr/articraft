@@ -98,6 +98,32 @@ paired doors, belt-linked sliders, or other mechanisms where one scalar joint
 should follow another as `q_follower = multiplier * q_source + offset`.
 Do not use it to represent non-linear couplings or true closed-loop mechanics.
 
+For a movable real-world mechanism, decide whether damping and friction are
+material to its behavior; these settings are not required uniformly for every
+asset. Doors, drawers, lids, valves, knobs, and slides need explicit
+`MotionProperties` only when their passive resistance is behaviorally
+meaningful. For a deliberately free joint, author
+`MotionProperties(damping=0.0, friction=0.0)` so the intent is distinct from an
+omitted estimate. Use nonzero `stiffness`/`equilibrium` only for a mechanism
+that semantically has a restoring or closed-side preload.
+
+```python
+model.articulation(
+    "cabinet_to_door",
+    ArticulationType.REVOLUTE,
+    parent=cabinet,
+    child=door,
+    origin=Origin(xyz=(0.35, 0.0, 0.9)),
+    axis=(0.0, 0.0, 1.0),
+    motion_limits=MotionLimits(effort=30.0, velocity=1.1, lower=0.0, upper=1.92),
+    motion_properties=MotionProperties(damping=0.3, friction=0.1),
+)
+```
+
+These numbers are starting estimates, not universal appliance-hinge values.
+Read `physics-parameters.md` and scale the choice to the moving part's mass,
+size, construction, and mechanism.
+
 ## Frame And Direction Conventions
 
 Articulations use a URDF-style joint frame:
@@ -315,6 +341,7 @@ model.articulation(
 ## See Also
 
 - `20_core_types.md` for `Part`, `Articulation`, `MotionLimits`, and materials
+- `35_physics_parameters.md` for material, mass, fallback, and joint-dynamics guidance
 - `80_testing.md` for geometry and articulation QC
 
 ## Clarifications for agent usage

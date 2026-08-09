@@ -65,6 +65,52 @@ _AUTOMATED_BASELINE_DEFAULT_CHECK_NAMES = frozenset(
 _MODEL_EXECUTION_LOCK = threading.Lock()
 
 
+def _physics_authoring_warnings(globals_dict: dict[str, Any]) -> list[str]:
+    object_model = globals_dict.get("object_model")
+    if object_model is None:
+        return []
+
+    warnings: list[str] = []
+    parts = list(getattr(object_model, "parts", ()) or ())
+    default_material_parts = [
+        str(getattr(part, "name", "<unnamed>"))
+        for part in parts
+        if getattr(part, "physics_material", None) is None
+    ]
+    if default_material_parts:
+        warnings.append(
+            "Physics authoring warning (non-blocking): "
+            f"{len(default_material_parts)} part(s) use the generic PhysicsMaterial fallback: "
+            f"{default_material_parts}. Assign a material-specific PhysicsMaterial when the "
+            "part's bulk/contact material is known."
+        )
+
+    movable_types = {"revolute", "continuous", "prismatic"}
+    missing_dynamics_joints: list[str] = []
+    for articulation in list(getattr(object_model, "articulations", ()) or ()):
+        articulation_type = getattr(articulation, "articulation_type", None)
+        type_name = str(getattr(articulation_type, "value", articulation_type))
+        if type_name not in movable_types:
+            continue
+        properties = getattr(articulation, "motion_properties", None)
+        if properties is None or (
+            getattr(properties, "damping", None) is None
+            and getattr(properties, "friction", None) is None
+            and getattr(properties, "stiffness", None) is None
+            and getattr(properties, "equilibrium", None) is None
+        ):
+            missing_dynamics_joints.append(str(getattr(articulation, "name", "<unnamed>")))
+    if missing_dynamics_joints:
+        warnings.append(
+            "Physics authoring warning (non-blocking): "
+            f"{len(missing_dynamics_joints)} movable joint(s) have no MotionProperties: "
+            f"{missing_dynamics_joints}. Author damping/friction, including explicit zeros for "
+            "intentionally free joints."
+        )
+
+    return warnings
+
+
 def _import_sdk_module(sdk_package: str, module_suffix: str = "") -> Any:
     package = normalize_sdk_package(sdk_package)
     return importlib.import_module(f"{package}{module_suffix}")
@@ -293,6 +339,8 @@ def _compile_urdf_report_impl(
     warnings: list[str] = []
     test_report = None
     target_key = _normalize_compile_target(target)
+    if target_key == "full" and run_checks:
+        warnings.extend(_physics_authoring_warnings(globals_dict))
     script_path = script_path.resolve()
     if run_checks:
         try:
