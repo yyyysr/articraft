@@ -11,6 +11,7 @@ from .booleans import (
     boolean_union,
     cut_opening_on_face,
     mesh_from_geometry,
+    save_mesh_geometry,
 )
 from .brackets import ClevisBracketGeometry, PivotForkGeometry, TrunnionYokeGeometry
 from .common import (
@@ -169,6 +170,7 @@ __all__ = [
     "boolean_union",
     "cut_opening_on_face",
     "mesh_from_geometry",
+    "save_mesh_geometry",
     "resample_side_sections",
     "rounded_rect_profile",
     "sample_arc_3d",

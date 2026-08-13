@@ -95,17 +95,20 @@ ctx = TestContext(model)
 ## Writing Managed Meshes
 
 ```python
-from sdk import AssetContext, BoxGeometry, mesh_from_geometry
+from sdk import AssetContext, BoxGeometry, mesh_from_geometry, save_mesh_geometry
 
 ASSETS = AssetContext.from_script(__file__)
 
 mesh = mesh_from_geometry(
     BoxGeometry((0.10, 0.04, 0.02)),
-    ASSETS.mesh_path("body.obj"),
+    "body",
 )
 ```
 
-- Use `mesh_path(...)` when a helper expects a writable path.
+- Pass a logical name to `mesh_from_geometry(...)` and use the returned `Mesh`
+  directly on a visual. Do not reconstruct it from `materialized_path`.
+- Use `save_mesh_geometry(geometry, path)` only when another tool requires an
+  OBJ at an exact caller-controlled path.
 - Use `mesh_ref(...)` when you need the SDK mesh reference string only.
 
 ## Notes

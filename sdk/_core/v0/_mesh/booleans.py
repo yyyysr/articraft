@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from math import sqrt
 from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple, Union
@@ -360,8 +361,21 @@ def mesh_from_geometry(
     geometry: MeshGeometry,
     name: Union[str, os.PathLike[str]],
 ) -> Mesh:
+    """Register a procedural mesh under a managed logical name.
+
+    Use a simple name such as ``"door_panel"`` or ``"door_panel.obj"``.
+    The active asset session owns the resulting portable mesh reference. Passing
+    a path is retained for compatibility only; use :func:`save_mesh_geometry`
+    when an exact output path is required.
+    """
     name_s = os.fspath(name)
     if _looks_like_legacy_mesh_filename(name_s):
+        warnings.warn(
+            "mesh_from_geometry(..., path) is deprecated; pass a logical mesh name "
+            "or use save_mesh_geometry(geometry, path) for an explicit file export.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         geometry.save_obj(name_s)
         resolved_path = Path(name_s).resolve()
         return Mesh(
@@ -383,6 +397,20 @@ def mesh_from_geometry(
         source_transform=_primitive_source_transform(geometry),
         materialized_path=info.path.as_posix(),
     )
+
+
+def save_mesh_geometry(
+    geometry: MeshGeometry,
+    path: str | os.PathLike[str],
+) -> Path:
+    """Write a procedural mesh to an explicit OBJ file path.
+
+    Unlike :func:`mesh_from_geometry`, this does not register a managed asset
+    or construct a portable :class:`Mesh` reference.
+    """
+    output_path = Path(path).expanduser()
+    geometry.save_obj(output_path)
+    return output_path.resolve()
 
 
 def _looks_like_legacy_mesh_filename(value: str) -> bool:

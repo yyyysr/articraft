@@ -80,6 +80,7 @@ from .mesh import (
     sample_catmull_rom_spline_3d,
     sample_cubic_bezier_spline_2d,
     sample_cubic_bezier_spline_3d,
+    save_mesh_geometry,
     split_superellipse_side_loft,
     superellipse_profile,
     superellipse_side_loft,
@@ -121,13 +122,13 @@ from .types import (
     Inertia,
     Inertial,
     Material,
-    PhysicsMaterial,
     Mesh,
     Mimic,
     MotionLimits,
     MotionProperties,
     Origin,
     Part,
+    PhysicsMaterial,
     Sphere,
     Visual,
 )
@@ -139,6 +140,7 @@ _CADQUERY_EXPORTS = {
     "export_cadquery_mesh",
     "mesh_components_from_cadquery",
     "mesh_from_cadquery",
+    "save_cadquery_obj",
     "tessellate_cadquery",
 }
 
@@ -240,6 +242,7 @@ __all__ = [
     "tube_from_spline_points",
     "sweep_profile_along_spline",
     "mesh_from_geometry",
+    "save_mesh_geometry",
     "mesh_from_input",
     "LoftSection",
     "LoftTessellation",

@@ -43,9 +43,6 @@ from sdk import (
 - `export_cadquery_components(...)`
 - `mesh_from_cadquery(...)`
 - `mesh_components_from_cadquery(...)`
-
-Compatibility helper:
-
 - `save_cadquery_obj(...)`
 
 ## Units
@@ -118,8 +115,8 @@ CadQueryMeshExport(
 
 - Materializes the OBJ internally and returns the managed `sdk.Mesh` plus local
   bounds.
-- `name`: logical mesh name such as `"door_panel"` or a legacy path-like name
-  such as `"door_panel.obj"`.
+- `name`: logical mesh name such as `"door_panel"` or `"door_panel.obj"`.
+  Do not pass a filesystem path.
 - `assets`: optional explicit asset owner or root. Read
   `../common/40_assets.md` when you need stable on-disk paths outside the
   managed harness.
@@ -165,6 +162,8 @@ mesh_from_cadquery(
 - This is the normal helper for attaching a CadQuery-authored visual to a part.
 - Parameters match `export_cadquery_mesh(...)`, but only the managed `Mesh` is
   returned.
+- `name` is a logical name. Do not reconstruct the result from
+  `mesh.materialized_path`.
 
 ### `mesh_components_from_cadquery(...)`
 
@@ -189,7 +188,7 @@ mesh_components_from_cadquery(
 ```python
 save_cadquery_obj(
     model: object,
-    name: str,
+    path: str | Path,
     *,
     assets=None,
     tolerance: float = 0.001,
@@ -198,9 +197,9 @@ save_cadquery_obj(
 ) -> Path
 ```
 
-- Public compatibility helper that returns the materialized OBJ path directly.
-- Prefer `export_cadquery_mesh(...)` or `mesh_from_cadquery(...)` for new code
-  when you want the managed `Mesh` object.
+- Writes the OBJ to exactly `path` and returns that path.
+- Use only when another external tool requires an explicit OBJ path. Prefer
+  `mesh_from_cadquery(...)` for normal SDK authoring.
 
 ## Recommended Pattern
 

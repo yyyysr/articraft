@@ -10,6 +10,7 @@ from sdk import (
     export_cadquery_components,
     mesh_components_from_cadquery,
     mesh_from_cadquery,
+    save_cadquery_obj,
 )
 from sdk._core.v0.assets import AssetContext
 
@@ -97,3 +98,24 @@ def test_mesh_from_cadquery_materializes_multi_solid_workplane(tmp_path) -> None
     assert mesh.materialized_path is not None
     assert Path(str(mesh.materialized_path)).exists()
     assert frame.get_visual("frame_body").geometry.filename == "assets/meshes/frame.obj"
+
+
+def test_save_cadquery_obj_writes_to_exact_explicit_path(tmp_path) -> None:
+    output_path = tmp_path / "external" / "part.obj"
+
+    saved_path = save_cadquery_obj(cq.Workplane("XY").box(1.0, 2.0, 3.0), output_path)
+
+    assert saved_path == output_path.resolve()
+    assert saved_path.is_file()
+    assert not (tmp_path / "assets" / "meshes").exists()
+
+
+def test_mesh_from_cadquery_warns_for_legacy_path_export(tmp_path) -> None:
+    assets = AssetContext(tmp_path)
+    output_path = assets.mesh_path("part.obj")
+
+    with pytest.warns(DeprecationWarning, match="save_cadquery_obj"):
+        mesh = mesh_from_cadquery(cq.Workplane("XY").box(1.0, 2.0, 3.0), output_path)
+
+    assert mesh.filename == "assets/meshes/part.obj"
+    assert mesh.materialized_path == output_path.as_posix()

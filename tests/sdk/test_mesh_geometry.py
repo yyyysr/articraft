@@ -560,6 +560,28 @@ def test_mesh_from_geometry_uses_managed_logical_names_without_paths() -> None:
     assert Path(mesh.materialized_path).exists()
 
 
+def test_save_mesh_geometry_writes_to_an_explicit_path_without_registering_an_asset(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "external" / "part.obj"
+
+    saved_path = sdk.save_mesh_geometry(sdk.BoxGeometry((0.1, 0.2, 0.3)), output_path)
+
+    assert saved_path == output_path.resolve()
+    assert saved_path.is_file()
+    assert not (tmp_path / "assets" / "meshes").exists()
+
+
+def test_mesh_from_geometry_warns_for_legacy_path_export(tmp_path: Path) -> None:
+    output_path = tmp_path / "assets" / "meshes" / "part.obj"
+
+    with pytest.warns(DeprecationWarning, match="save_mesh_geometry"):
+        mesh = sdk.mesh_from_geometry(sdk.BoxGeometry((0.1, 0.2, 0.3)), output_path)
+
+    assert mesh.filename == "assets/meshes/part.obj"
+    assert mesh.materialized_path == output_path.as_posix()
+
+
 def test_mesh_from_input_uses_managed_input_catalog(tmp_path) -> None:
     inputs_dir = tmp_path / "inputs"
     inputs_dir.mkdir(parents=True, exist_ok=True)

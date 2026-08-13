@@ -314,6 +314,21 @@ mesh_from_geometry(
 - Materializes the mesh to an internal OBJ managed by the runtime.
 - Returns an `sdk.Mesh` descriptor pointing at the managed asset.
 - Use this when the final authored visual should be mesh-backed.
+- `name` is a logical name, not an output path. Do not pass
+  `ASSETS.mesh_path(...)` or use `materialized_path` as a mesh filename.
+
+### `save_mesh_geometry(...)`
+
+```python
+save_mesh_geometry(
+    geometry: MeshGeometry,
+    path: str | Path,
+) -> Path
+```
+
+- Writes an OBJ to exactly `path` for external tools.
+- Does not register a managed SDK mesh. Use `mesh_from_geometry(...)` for
+  normal articulated-object authoring.
 
 ## Advice
 

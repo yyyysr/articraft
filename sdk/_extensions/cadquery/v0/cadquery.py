@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shutil
+import warnings
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -600,17 +601,30 @@ def export_cadquery_mesh(
 
 def save_cadquery_obj(
     model: object,
-    name: str | os.PathLike[str],
+    path: str | os.PathLike[str],
     *,
     assets: AssetContextLike | None = None,
     tolerance: float = 0.001,
     angular_tolerance: float = 0.1,
     unit_scale: float = 1.0,
 ) -> Path:
+    """Write a CadQuery shape to exactly ``path`` as an OBJ file.
+
+    This function is for external tools that require a caller-controlled file
+    location. Use :func:`mesh_from_cadquery` for normal SDK authoring.
+    """
+    if assets is not None:
+        warnings.warn(
+            "save_cadquery_obj(..., assets=...) is deprecated; explicit file exports "
+            "do not use a managed asset context.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    output_path = Path(path).expanduser().resolve()
     export = export_cadquery_mesh(
         model,
-        name,
-        assets=assets,
+        output_path,
+        assets=None,
         tolerance=tolerance,
         angular_tolerance=angular_tolerance,
         unit_scale=unit_scale,
@@ -665,6 +679,19 @@ def mesh_from_cadquery(
     angular_tolerance: float = 0.1,
     unit_scale: float = 1.0,
 ) -> Mesh:
+    """Register a CadQuery shape under a managed logical mesh name.
+
+    Use a simple name such as ``"door_panel"``. Passing a path is retained for
+    compatibility only; use :func:`save_cadquery_obj` for an explicit output
+    path.
+    """
+    if _looks_like_legacy_export_name(name):
+        warnings.warn(
+            "mesh_from_cadquery(..., path) is deprecated; pass a logical mesh name "
+            "or use save_cadquery_obj(model, path) for an explicit file export.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     export = export_cadquery_mesh(
         model,
         name,
