@@ -13,6 +13,7 @@ from sdk import (
     Box,
     Inertial,
     Material,
+    Mesh,
     MotionLimits,
     MotionProperties,
     Origin,
@@ -103,6 +104,53 @@ def test_compile_object_to_urdf_xml_derives_missing_inertial_from_collisions() -
         inertia = inertial.find("inertia")
         assert mass is not None and float(mass.attrib["value"]) > 0.0
         assert inertia is not None and float(inertia.attrib["izz"]) > 0.0
+
+
+def test_compile_object_to_urdf_xml_makes_managed_absolute_mesh_paths_portable(
+    tmp_path: Path,
+) -> None:
+    mesh_path = tmp_path / "assets" / "meshes" / "part.obj"
+    mesh_path.parent.mkdir(parents=True)
+    mesh_path.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n", encoding="utf-8")
+
+    model = ArticulatedObject(name="portable_mesh", assets=tmp_path)
+    base = model.part("base")
+    mesh = Mesh(filename=mesh_path, materialized_path=mesh_path.as_posix())
+    base.visual(mesh, name="part")
+
+    root = ET.fromstring(compile_object_to_urdf_xml(model, asset_root=tmp_path))
+    filenames = [element.attrib["filename"] for element in root.findall(".//mesh")]
+
+    assert filenames == ["assets/meshes/part.obj", "assets/meshes/part.obj"]
+
+
+def test_compile_object_to_urdf_xml_normalizes_legacy_record_mesh_paths(
+    tmp_path: Path,
+) -> None:
+    mesh_path = tmp_path / "assets" / "meshes" / "part.obj"
+    mesh_path.parent.mkdir(parents=True)
+    mesh_path.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n", encoding="utf-8")
+
+    model = ArticulatedObject(name="portable_legacy_mesh", assets=tmp_path)
+    base = model.part("base")
+    base.visual(
+        Mesh(
+            filename="data/records/rec_example/revisions/rev_000001/assets/meshes/part.obj",
+            materialized_path=mesh_path.as_posix(),
+        ),
+        name="part",
+    )
+
+    root = ET.fromstring(
+        compile_object_to_urdf_xml(
+            model,
+            asset_root=tmp_path,
+            include_physical_collisions=False,
+        )
+    )
+    filenames = [element.attrib["filename"] for element in root.findall(".//mesh")]
+
+    assert filenames == ["assets/meshes/part.obj"]
 
 
 def test_usd_and_urdf_export_passive_joint_dynamics(tmp_path: Path) -> None:

@@ -688,6 +688,43 @@ def test_compile_urdf_report_preserves_visual_obj_meshes_by_default(tmp_path: Pa
     assert report.signal_bundle.status == "success"
 
 
+def test_compile_urdf_report_normalizes_legacy_materialized_mesh_filename(
+    tmp_path: Path,
+) -> None:
+    script_path = tmp_path / "model.py"
+    script_path.write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "",
+                "from sdk import AssetContext, ArticulatedObject, BoxGeometry, Mesh, mesh_from_geometry",
+                "",
+                "ASSETS = AssetContext.from_script(__file__)",
+                "exported = mesh_from_geometry(",
+                "    BoxGeometry((0.1, 0.1, 0.1)),",
+                "    ASSETS.mesh_path('part.obj'),",
+                ")",
+                "object_model = ArticulatedObject(name='legacy_mesh', assets=ASSETS)",
+                "base = object_model.part('base')",
+                "base.visual(",
+                "    Mesh(",
+                "        filename=exported.materialized_path,",
+                "        name=exported.name,",
+                "        materialized_path=exported.materialized_path,",
+                "    ),",
+                "    name='part',",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = compile_urdf_report(script_path, run_checks=False, target="visual")
+
+    assert 'filename="assets/meshes/part.obj"' in report.urdf_xml
+    assert str(tmp_path) not in report.urdf_xml
+
+
 def test_compile_urdf_report_auto_suffixes_managed_mesh_name_conflicts(tmp_path: Path) -> None:
     script_path = tmp_path / "model.py"
     script_path.write_text(

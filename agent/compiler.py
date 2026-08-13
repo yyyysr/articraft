@@ -178,6 +178,9 @@ def _extract_urdf_xml(
 
             script_dir = globals_dict.get("__file__")
             asset_root = Path(script_dir).resolve().parent if isinstance(script_dir, str) else None
+            object_assets = getattr(object_model, "assets", None)
+            if object_assets is not None:
+                asset_root = object_assets
             try:
                 params = inspect.signature(compile_object_to_urdf_xml).parameters
             except Exception:
