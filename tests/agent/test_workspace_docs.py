@@ -4,7 +4,11 @@ import asyncio
 from pathlib import Path
 
 from agent.tools.read_file import ReadFileTool
-from agent.workspace_docs import build_virtual_workspace, load_sdk_docs_bundle
+from agent.workspace_docs import (
+    build_virtual_workspace,
+    load_sdk_docs_bundle,
+    load_sdk_docs_reference,
+)
 
 
 def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
@@ -18,7 +22,15 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
         "docs/sdk/references/probe-tooling.md",
         "docs/sdk/references/testing.md",
     )
+    assert bundle.resolve("docs/sdk/references/material-catalogs.md").disk_path.name == (
+        "25_material_catalogs.md"
+    )
+    assert "materials_libs_v2" not in bundle.read_text("docs/sdk/references/quickstart.md")
+    preloaded = load_sdk_docs_reference(repo_root, sdk_package="sdk")
+    assert "Aluminum Brushed" not in preloaded
+    assert "materials_libs_v2" not in preloaded
     assert "docs/sdk/references/assets.md" in bundle.files_by_path
+    assert "docs/sdk/references/physics-parameters.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/mesh-geometry.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/panels-and-grilles.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/knobs-and-controls.md" in bundle.files_by_path

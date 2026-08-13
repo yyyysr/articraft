@@ -25,7 +25,7 @@ do not imply matching Python submodules.
 
 ```python
 # Correct
-from sdk import ArticulatedObject, MotionLimits, place_on_face
+from sdk import ArticulatedObject, MotionLimits, MotionProperties, PhysicsMaterial, place_on_face
 
 # Wrong
 from sdk.placement import place_on_face
@@ -41,8 +41,12 @@ Always available in `docs/sdk/references/`:
 - `errors.md`: common compile and authoring failures, plus how to interpret them.
 - `core-types.md`: geometry, material, articulation, and test-related core
   types, plus optional inertial helpers.
+- `material-catalogs.md`: optional searchable visual-material catalogs,
+  per-visual binding, renderer fallbacks, and textured-material requirements.
 - `articulated-object.md`: object, part, and articulation authoring helpers and lookup
   patterns.
+- `physics-parameters.md`: physical-material, mass-property, passive-joint-dynamics,
+  fallback, and parameter-selection guidance.
 - `assets.md`: explicit asset-root helpers for standalone scripts and tests.
 - `placement.md`: placement helpers for mounting, offsets, wrapping, and alignment.
 - `probe-tooling.md`: `probe_model` helper catalog and inspection workflow.
@@ -79,6 +83,12 @@ falling back to the low-level mesh page.
 
 Read the exact document you need. Do not guess helper names or signatures from memory.
 
+When a named realistic surface finish would materially improve the object, call
+`find_materials` and use the exact returned catalog/id pair. Do not read the
+material USD and do not invent catalog names. Catalog use is optional: retain
+ordinary `rgba` or `texture` materials when they are adequate. Read
+`docs/sdk/references/material-catalogs.md` only when using this workflow.
+
 ## Script Contract
 
 Every generated script should define:
@@ -103,7 +113,9 @@ from sdk import (
     ArticulationType,
     Box,
     MotionLimits,
+    MotionProperties,
     Origin,
+    PhysicsMaterial,
     TestContext,
     TestReport,
 )
@@ -135,15 +147,22 @@ from sdk import (
 
 def build_object_model() -> ArticulatedObject:
     model = ArticulatedObject(name="example_box_lid")
+    painted_plastic = PhysicsMaterial(
+        name="painted_plastic",
+        density=1100.0,
+        static_friction=0.6,
+        dynamic_friction=0.45,
+        restitution=0.05,
+    )
 
-    base = model.part("base")
+    base = model.part("base", physics_material=painted_plastic)
     base.visual(
         Box((0.20, 0.20, 0.05)),
         origin=Origin(xyz=(0.0, 0.0, 0.025)),
         name="base_shell",
     )
 
-    lid = model.part("lid")
+    lid = model.part("lid", physics_material=painted_plastic)
     lid.visual(
         Box((0.18, 0.18, 0.02)),
         # The lid part frame sits on the hinge line; the panel extends along +X.
@@ -162,6 +181,7 @@ def build_object_model() -> ArticulatedObject:
         origin=Origin(xyz=(-0.09, 0.0, 0.05)),
         axis=(0.0, -1.0, 0.0),
         motion_limits=MotionLimits(effort=5.0, velocity=3.0, lower=0.0, upper=1.2),
+        motion_properties=MotionProperties(damping=0.1, friction=0.02),
     )
 
     return model

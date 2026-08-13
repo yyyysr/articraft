@@ -139,6 +139,9 @@ class StorageLayout:
     def record_materialization_assets_dir(self, record_id: str) -> Path:
         return self.record_materialization_dir(record_id) / "assets"
 
+    def record_materialization_textures_dir(self, record_id: str) -> Path:
+        return self.record_materialization_dir(record_id) / "textures"
+
     def record_materialization_asset_meshes_dir(self, record_id: str) -> Path:
         return self.record_materialization_assets_dir(record_id) / "meshes"
 

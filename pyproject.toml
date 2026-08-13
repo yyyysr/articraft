@@ -27,6 +27,7 @@ dependencies = [
     "rich>=13.7.0",
     "uvicorn>=0.30.0",
     "pydantic>=2.0.0",
+    "pyyaml>=6.0",
     "manifold3d>=3.3.2",
     "trimesh>=4.11.3",
     "python-fcl>=0.7.0.8",
@@ -88,8 +89,6 @@ dev = [
 
 [tool.uv]
 required-version = ">=0.9.17"
-exclude-newer = "7 days"
-exclude-newer-package = { anthropic = "2026-05-12T00:00:00Z" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

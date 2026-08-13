@@ -18,6 +18,9 @@ def test_storage_layout_paths() -> None:
     assert layout.record_materialization_dir("rec_123") == Path(
         "/tmp/articraft/data/cache/record_materialization/rec_123"
     )
+    assert layout.record_materialization_textures_dir("rec_123") == Path(
+        "/tmp/articraft/data/cache/record_materialization/rec_123/textures"
+    )
 
 
 def test_storage_layout_uses_external_data_root() -> None:

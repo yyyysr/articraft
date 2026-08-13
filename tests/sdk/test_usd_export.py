@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -12,7 +13,9 @@ from sdk import (
     Box,
     Inertial,
     Material,
+    Mesh,
     MotionLimits,
+    MotionProperties,
     Origin,
     PhysicsMaterial,
 )
@@ -73,10 +76,13 @@ def test_compile_object_to_usd_bytes_authors_visuals_collisions_materials_and_jo
     assert UsdPhysics.MassAPI(lid_prim).GetMassAttr().Get() > 0.0
     assert base_prim.GetAttribute("articraft:inertialSource").Get() == "explicit"
     assert lid_prim.GetAttribute("articraft:inertialSource").Get() == "estimated_collision"
+    assert base_prim.GetAttribute("articraft:physicsMaterialSource").Get() == "explicit"
+    assert lid_prim.GetAttribute("articraft:physicsMaterialSource").Get() == "explicit"
     physics_material = stage.GetPrimAtPath("/root/Physics/Materials/steel")
-    assert UsdPhysics.MaterialAPI(physics_material).GetStaticFrictionAttr().Get() == pytest.approx(
-        0.7
-    )
+    physics_api = UsdPhysics.MaterialAPI(physics_material)
+    assert physics_api.GetDensityAttr().HasAuthoredValueOpinion()
+    assert physics_api.GetDensityAttr().Get() == pytest.approx(7800.0)
+    assert physics_api.GetStaticFrictionAttr().Get() == pytest.approx(0.7)
     collision = stage.GetPrimAtPath("/root/base/Collisions/base_shell")
     assert collision.GetRelationship("material:binding:physics").GetTargets()
 
@@ -98,3 +104,121 @@ def test_compile_object_to_urdf_xml_derives_missing_inertial_from_collisions() -
         inertia = inertial.find("inertia")
         assert mass is not None and float(mass.attrib["value"]) > 0.0
         assert inertia is not None and float(inertia.attrib["izz"]) > 0.0
+
+
+def test_compile_object_to_urdf_xml_makes_managed_absolute_mesh_paths_portable(
+    tmp_path: Path,
+) -> None:
+    mesh_path = tmp_path / "assets" / "meshes" / "part.obj"
+    mesh_path.parent.mkdir(parents=True)
+    mesh_path.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n", encoding="utf-8")
+
+    model = ArticulatedObject(name="portable_mesh", assets=tmp_path)
+    base = model.part("base")
+    mesh = Mesh(filename=mesh_path, materialized_path=mesh_path.as_posix())
+    base.visual(mesh, name="part")
+
+    root = ET.fromstring(compile_object_to_urdf_xml(model, asset_root=tmp_path))
+    filenames = [element.attrib["filename"] for element in root.findall(".//mesh")]
+
+    assert filenames == ["assets/meshes/part.obj", "assets/meshes/part.obj"]
+
+
+def test_compile_object_to_urdf_xml_normalizes_legacy_record_mesh_paths(
+    tmp_path: Path,
+) -> None:
+    mesh_path = tmp_path / "assets" / "meshes" / "part.obj"
+    mesh_path.parent.mkdir(parents=True)
+    mesh_path.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n", encoding="utf-8")
+
+    model = ArticulatedObject(name="portable_legacy_mesh", assets=tmp_path)
+    base = model.part("base")
+    base.visual(
+        Mesh(
+            filename="data/records/rec_example/revisions/rev_000001/assets/meshes/part.obj",
+            materialized_path=mesh_path.as_posix(),
+        ),
+        name="part",
+    )
+
+    root = ET.fromstring(
+        compile_object_to_urdf_xml(
+            model,
+            asset_root=tmp_path,
+            include_physical_collisions=False,
+        )
+    )
+    filenames = [element.attrib["filename"] for element in root.findall(".//mesh")]
+
+    assert filenames == ["assets/meshes/part.obj"]
+
+
+def test_usd_and_urdf_export_passive_joint_dynamics(tmp_path: Path) -> None:
+    model = ArticulatedObject(name="passive_joint_dynamics")
+    base = model.part("base")
+    door = model.part("door")
+    drawer = model.part("drawer")
+    base.visual(Box((1.0, 0.6, 1.0)), name="base_shell")
+    door.visual(Box((0.5, 0.04, 0.8)), name="door_shell")
+    drawer.visual(Box((0.4, 0.4, 0.15)), name="drawer_shell")
+    model.articulation(
+        "door_hinge",
+        ArticulationType.REVOLUTE,
+        parent=base,
+        child=door,
+        motion_limits=MotionLimits(effort=12.0, velocity=1.4, lower=0.0, upper=1.5),
+        motion_properties=MotionProperties(
+            damping=0.36,
+            friction=0.2,
+            stiffness=40.0,
+            equilibrium=0.1,
+        ),
+    )
+    model.articulation(
+        "drawer_slide",
+        ArticulationType.PRISMATIC,
+        parent=base,
+        child=drawer,
+        motion_limits=MotionLimits(effort=28.0, velocity=0.35, lower=0.0, upper=0.3),
+        motion_properties=MotionProperties(damping=3.0, friction=1.5),
+    )
+
+    usd_path = tmp_path / "passive_joint_dynamics.usd"
+    usd_path.write_bytes(compile_object_to_usd_bytes(model, asset_root=tmp_path))
+    stage = Usd.Stage.Open(str(usd_path))
+    assert stage is not None
+
+    hinge = stage.GetPrimAtPath("/root/Joints/door_hinge")
+    assert hinge.HasAPI(UsdPhysics.DriveAPI, UsdPhysics.Tokens.angular)
+    assert hinge.GetAttribute("drive:angular:physics:type").Get() == UsdPhysics.Tokens.force
+    assert hinge.GetAttribute("drive:angular:physics:stiffness").Get() == pytest.approx(
+        40.0 * math.pi / 180.0
+    )
+    assert hinge.GetAttribute("drive:angular:physics:damping").Get() == pytest.approx(
+        0.36 * math.pi / 180.0
+    )
+    assert hinge.GetAttribute("drive:angular:physics:targetVelocity").Get() == 0.0
+    assert hinge.GetAttribute("drive:angular:physics:targetPosition").Get() == pytest.approx(
+        0.1 * 180.0 / math.pi
+    )
+    assert hinge.GetAttribute("drive:angular:physics:maxForce").Get() == pytest.approx(12.0)
+    assert hinge.GetAttribute("articraft:jointFriction").Get() == pytest.approx(0.2)
+    assert hinge.GetAttribute("articraft:jointStiffness").Get() == pytest.approx(40.0)
+    assert hinge.GetAttribute("articraft:jointEquilibrium").Get() == pytest.approx(0.1)
+
+    slide = stage.GetPrimAtPath("/root/Joints/drawer_slide")
+    assert slide.HasAPI(UsdPhysics.DriveAPI, UsdPhysics.Tokens.linear)
+    assert slide.GetAttribute("drive:linear:physics:damping").Get() == pytest.approx(3.0)
+    assert slide.GetAttribute("drive:linear:physics:maxForce").Get() == pytest.approx(28.0)
+    assert slide.GetAttribute("articraft:jointFriction").Get() == pytest.approx(1.5)
+
+    root = ET.fromstring(compile_object_to_urdf_xml(model))
+    joints = {joint.attrib["name"]: joint for joint in root.findall("joint")}
+    assert joints["door_hinge"].find("dynamics").attrib == {
+        "damping": "0.36",
+        "friction": "0.2",
+    }
+    assert joints["drawer_slide"].find("dynamics").attrib == {
+        "damping": "3",
+        "friction": "1.5",
+    }

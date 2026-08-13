@@ -9,6 +9,7 @@ from ._physics_properties import resolve_part_inertial
 from .articulated_object import ArticulatedObject
 from .errors import ValidationError
 from .exact_collisions import compile_object_model_with_exact_collisions
+from .material_catalog import catalog_fallback_rgba, resolve_material_entry
 from .types import (
     Articulation,
     ArticulationType,
@@ -93,7 +94,31 @@ def _maybe_origin(parent: ET.Element, origin: Origin) -> None:
     )
 
 
-def _geometry_element(parent: ET.Element, geometry: Geometry) -> None:
+def _portable_mesh_filename(filename: str | os.PathLike[str], *, asset_root: object = None) -> str:
+    path = Path(filename)
+    if asset_root is None:
+        return os.fspath(filename)
+
+    root = getattr(asset_root, "asset_root", asset_root)
+    root_path = Path(root).resolve()
+    if path.is_absolute():
+        try:
+            return path.resolve().relative_to(root_path).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    raw = path.as_posix()
+    for prefix in ("assets/meshes/", "assets/glb/"):
+        index = raw.find(prefix)
+        if index < 0:
+            continue
+        portable = raw[index:]
+        if (root_path / portable).is_file():
+            return portable
+    return raw
+
+
+def _geometry_element(parent: ET.Element, geometry: Geometry, *, asset_root: object = None) -> None:
     geom = ET.SubElement(parent, "geometry")
     if isinstance(geometry, Box):
         ET.SubElement(geom, "box", {"size": _format_vec(geometry.size)})
@@ -109,7 +134,7 @@ def _geometry_element(parent: ET.Element, geometry: Geometry) -> None:
     elif isinstance(geometry, Sphere):
         ET.SubElement(geom, "sphere", {"radius": _format_float(geometry.radius)})
     elif isinstance(geometry, Mesh):
-        attrs = {"filename": os.fspath(geometry.filename)}
+        attrs = {"filename": _portable_mesh_filename(geometry.filename, asset_root=asset_root)}
         if geometry.scale:
             attrs["scale"] = _format_vec(geometry.scale)
         ET.SubElement(geom, "mesh", attrs)
@@ -119,8 +144,12 @@ def _geometry_element(parent: ET.Element, geometry: Geometry) -> None:
 
 def _material_element(material: Material) -> ET.Element:
     elem = ET.Element("material", {"name": material.name})
-    if material.rgba is not None:
-        rgba = tuple(float(v) for v in material.rgba)
+    resolved_rgba = material.rgba
+    if resolved_rgba is None and material.catalog:
+        entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+        resolved_rgba = catalog_fallback_rgba(entry)
+    if resolved_rgba is not None:
+        rgba = tuple(float(v) for v in resolved_rgba)
         if len(rgba) == 3:
             rgba = rgba + (1.0,)
         if len(rgba) != 4:
@@ -131,11 +160,11 @@ def _material_element(material: Material) -> ET.Element:
     return elem
 
 
-def _visual_element(visual: Visual) -> ET.Element:
+def _visual_element(visual: Visual, *, asset_root: object = None) -> ET.Element:
     attrs = {"name": visual.name} if visual.name else {}
     elem = ET.Element("visual", attrs)
     _maybe_origin(elem, visual.origin)
-    _geometry_element(elem, visual.geometry)
+    _geometry_element(elem, visual.geometry, asset_root=asset_root)
     if visual.material:
         if isinstance(visual.material, Material):
             elem.append(_material_element(visual.material))
@@ -144,11 +173,11 @@ def _visual_element(visual: Visual) -> ET.Element:
     return elem
 
 
-def _collision_element(collision: Collision) -> ET.Element:
+def _collision_element(collision: Collision, *, asset_root: object = None) -> ET.Element:
     attrs = {"name": collision.name} if collision.name else {}
     elem = ET.Element("collision", attrs)
     _maybe_origin(elem, collision.origin)
-    _geometry_element(elem, collision.geometry)
+    _geometry_element(elem, collision.geometry, asset_root=asset_root)
     return elem
 
 
@@ -176,9 +205,9 @@ def _part_element(part: Part, *, asset_root: object = None) -> ET.Element:
     inertial, _source = resolve_part_inertial(part, asset_root=asset_root)
     elem.append(_inertial_element(inertial))
     for visual in part.visuals:
-        elem.append(_visual_element(visual))
+        elem.append(_visual_element(visual, asset_root=asset_root))
     for collision in part.collisions:
-        elem.append(_collision_element(collision))
+        elem.append(_collision_element(collision, asset_root=asset_root))
     return elem
 
 

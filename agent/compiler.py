@@ -9,6 +9,7 @@ import math
 import os
 import re
 import runpy
+import shutil
 import statistics
 import sys
 import threading
@@ -62,6 +63,52 @@ _AUTOMATED_BASELINE_DEFAULT_CHECK_NAMES = frozenset(
     }
 )
 _MODEL_EXECUTION_LOCK = threading.Lock()
+
+
+def _physics_authoring_warnings(globals_dict: dict[str, Any]) -> list[str]:
+    object_model = globals_dict.get("object_model")
+    if object_model is None:
+        return []
+
+    warnings: list[str] = []
+    parts = list(getattr(object_model, "parts", ()) or ())
+    default_material_parts = [
+        str(getattr(part, "name", "<unnamed>"))
+        for part in parts
+        if getattr(part, "physics_material", None) is None
+    ]
+    if default_material_parts:
+        warnings.append(
+            "Physics authoring warning (non-blocking): "
+            f"{len(default_material_parts)} part(s) use the generic PhysicsMaterial fallback: "
+            f"{default_material_parts}. Assign a material-specific PhysicsMaterial when the "
+            "part's bulk/contact material is known."
+        )
+
+    movable_types = {"revolute", "continuous", "prismatic"}
+    missing_dynamics_joints: list[str] = []
+    for articulation in list(getattr(object_model, "articulations", ()) or ()):
+        articulation_type = getattr(articulation, "articulation_type", None)
+        type_name = str(getattr(articulation_type, "value", articulation_type))
+        if type_name not in movable_types:
+            continue
+        properties = getattr(articulation, "motion_properties", None)
+        if properties is None or (
+            getattr(properties, "damping", None) is None
+            and getattr(properties, "friction", None) is None
+            and getattr(properties, "stiffness", None) is None
+            and getattr(properties, "equilibrium", None) is None
+        ):
+            missing_dynamics_joints.append(str(getattr(articulation, "name", "<unnamed>")))
+    if missing_dynamics_joints:
+        warnings.append(
+            "Physics authoring warning (non-blocking): "
+            f"{len(missing_dynamics_joints)} movable joint(s) have no MotionProperties: "
+            f"{missing_dynamics_joints}. Author damping/friction, including explicit zeros for "
+            "intentionally free joints."
+        )
+
+    return warnings
 
 
 def _import_sdk_module(sdk_package: str, module_suffix: str = "") -> Any:
@@ -131,6 +178,9 @@ def _extract_urdf_xml(
 
             script_dir = globals_dict.get("__file__")
             asset_root = Path(script_dir).resolve().parent if isinstance(script_dir, str) else None
+            object_assets = getattr(object_model, "assets", None)
+            if object_assets is not None:
+                asset_root = object_assets
             try:
                 params = inspect.signature(compile_object_to_urdf_xml).parameters
             except Exception:
@@ -171,21 +221,28 @@ def _extract_usd_bytes(
     export_exc: Exception | None = None
     try:
         if object_model is not None:
-            compile_object_to_usd_bytes = getattr(
-                _import_sdk_module(sdk_package, ".v0._usd_export"),
-                "compile_object_to_usd_bytes",
+            usd_export = _import_sdk_module(sdk_package, ".v0._usd_export")
+            compile_object_to_usd_bytes = getattr(usd_export, "compile_object_to_usd_bytes")
+            compile_object_to_usd_package = getattr(
+                usd_export, "compile_object_to_usd_package", None
             )
             script_dir = globals_dict.get("__file__")
             asset_root = Path(script_dir).resolve().parent if isinstance(script_dir, str) else None
             object_assets = getattr(object_model, "assets", None)
             if object_assets is not None:
                 asset_root = object_assets
-            usd_bytes = compile_object_to_usd_bytes(
-                object_model,
-                asset_root=asset_root,
-                include_physical_collisions=include_physical_collisions,
-                validate=validate_export,
-            )
+            compile_kwargs = {
+                "asset_root": asset_root,
+                "include_physical_collisions": include_physical_collisions,
+                "validate": validate_export,
+            }
+            if callable(compile_object_to_usd_package):
+                usd_bytes, usd_assets = compile_object_to_usd_package(
+                    object_model, **compile_kwargs
+                )
+                globals_dict["usd_assets"] = dict(usd_assets)
+            else:
+                usd_bytes = compile_object_to_usd_bytes(object_model, **compile_kwargs)
             globals_dict["usd_bytes"] = usd_bytes
     except Exception as exc:
         export_exc = exc
@@ -285,6 +342,8 @@ def _compile_urdf_report_impl(
     warnings: list[str] = []
     test_report = None
     target_key = _normalize_compile_target(target)
+    if target_key == "full" and run_checks:
+        warnings.extend(_physics_authoring_warnings(globals_dict))
     script_path = script_path.resolve()
     if run_checks:
         try:
@@ -350,6 +409,7 @@ def _compile_urdf_report_impl(
                             test_report=getattr(wrapped, "test_report", None),
                         ),
                         usd_bytes=usd_bytes,
+                        usd_assets=dict(globals_dict.get("usd_assets") or {}),
                     )
             raise wrapped from exc
 
@@ -391,6 +451,7 @@ def _compile_urdf_report_impl(
         warnings=warnings,
         signal_bundle=signal_bundle,
         usd_bytes=usd_bytes,
+        usd_assets=dict(globals_dict.get("usd_assets") or {}),
     )
 
 
@@ -653,6 +714,7 @@ def _compile_worker(
             "warnings": report.warnings,
             "signal_bundle": report.signal_bundle.to_dict(),
             "usd_bytes": report.usd_bytes,
+            "usd_assets": report.usd_assets,
         }
         conn.send(payload)  # type: ignore[attr-defined]
     except BaseException as exc:
@@ -754,6 +816,7 @@ def compile_urdf_report_maybe_timeout(
         warnings = msg.get("warnings")
         signal_bundle_payload = msg.get("signal_bundle")
         usd_bytes = msg.get("usd_bytes")
+        usd_assets = msg.get("usd_assets")
         if not isinstance(urdf_xml, str):
             raise RuntimeError("URDF compile failed: missing urdf_xml from worker")
         if not isinstance(warnings, list):
@@ -767,6 +830,11 @@ def compile_urdf_report_maybe_timeout(
             warnings=[str(w) for w in warnings],
             signal_bundle=signal_bundle,
             usd_bytes=bytes(usd_bytes) if isinstance(usd_bytes, (bytes, bytearray)) else None,
+            usd_assets={
+                str(path): bytes(payload)
+                for path, payload in (usd_assets.items() if isinstance(usd_assets, dict) else [])
+                if isinstance(payload, (bytes, bytearray))
+            },
         )
 
     error_text = str(msg.get("error", "Unknown compile worker error")).strip()
@@ -1315,6 +1383,7 @@ def persist_compile_success_artifacts(
     urdf_xml: str,
     urdf_out: Path | None,
     usd_bytes: bytes | None = None,
+    usd_assets: dict[str, bytes] | None = None,
     usd_out: Path | None = None,
     outputs_root: Path | None,
     previous_sig: str | None = None,
@@ -1331,6 +1400,8 @@ def persist_compile_success_artifacts(
     sig_payload = urdf_xml.encode("utf-8")
     if isinstance(usd_bytes, (bytes, bytearray)):
         sig_payload += b"\0" + bytes(usd_bytes)
+    for relative_path, payload in sorted((usd_assets or {}).items()):
+        sig_payload += b"\0" + relative_path.encode("utf-8") + b"\0" + bytes(payload)
     sig = hashlib.sha1(sig_payload).hexdigest()
     if previous_sig and sig == previous_sig:
         return previous_sig
@@ -1345,9 +1416,33 @@ def persist_compile_success_artifacts(
         out_path = Path(usd_out).resolve()
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_bytes(bytes(usd_bytes))
+        persist_usd_assets(usd_assets or {}, out_path.parent)
         logger.info("Wrote checkpoint USD to %s", out_path)
 
     if outputs_root is not None:
         update_manifest(Path(outputs_root).resolve())
 
     return sig
+
+
+def persist_usd_assets(usd_assets: dict[str, bytes], output_dir: Path) -> None:
+    root = Path(output_dir).resolve()
+    textures_dir = root / "textures"
+    if textures_dir.exists():
+        shutil.rmtree(textures_dir)
+    for relative, payload in usd_assets.items():
+        relative_path = Path(relative)
+        if (
+            relative_path.is_absolute()
+            or relative_path.suffix.lower() != ".png"
+            or not relative_path.parts
+            or relative_path.parts[0] != "textures"
+        ):
+            raise ValueError(f"Invalid USD texture asset path: {relative}")
+        target = (root / relative_path).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(f"USD texture asset escapes output directory: {relative}") from exc
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(bytes(payload))

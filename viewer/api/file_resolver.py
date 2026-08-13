@@ -86,7 +86,10 @@ class ViewerFileResolver:
             target = self.repo.layout.record_materialization_compile_report_path(
                 record_id
             ).resolve()
-        elif len(requested_path.parts) >= 2 and requested_path.parts[0] == "assets":
+        elif len(requested_path.parts) >= 2 and requested_path.parts[0] in {
+            "assets",
+            "textures",
+        }:
             root = self.repo.layout.record_materialization_dir(record_id).resolve()
             target = (root / requested_path).resolve()
         elif requested_path.parts in {
@@ -150,9 +153,12 @@ class ViewerFileResolver:
             return self.resolve_record_target(record_id, file_path)
         except HTTPException as exc:
             needs_forced_rebuild = exc.status_code == 404 and (
-                len(requested_path.parts) >= 2
-                and requested_path.parts[0] == "assets"
-                and requested_path.parts[1] in {"meshes", "glb", "viewer"}
+                (
+                    len(requested_path.parts) >= 2
+                    and requested_path.parts[0] == "assets"
+                    and requested_path.parts[1] in {"meshes", "glb", "viewer"}
+                )
+                or (len(requested_path.parts) >= 2 and requested_path.parts[0] == "textures")
             )
             if not needs_forced_rebuild:
                 raise
@@ -386,4 +392,6 @@ def should_attempt_materialize_for_record_path(file_path: str) -> bool:
         return True
     if len(requested_path.parts) >= 2 and requested_path.parts[0] == "assets":
         return requested_path.parts[1] in {"meshes", "glb", "viewer"}
+    if len(requested_path.parts) >= 2 and requested_path.parts[0] == "textures":
+        return True
     return False

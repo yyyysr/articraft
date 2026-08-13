@@ -128,6 +128,9 @@ Material(
     texture: str | None = None,
     *,
     color: tuple[float, float, float] | tuple[float, float, float, float] | None = None,
+    catalog: str | None = None,
+    catalog_material: str | None = None,
+    parameters: Mapping[str, object] | None = None,
 )
 ```
 
@@ -135,6 +138,12 @@ Material(
 - `rgba`: 3 or 4 floats. A 3-tuple is expanded to `(r, g, b, 1.0)`.
 - `color`: compatibility alias for `rgba`. Use either `rgba` or `color`, not both.
 - `texture`: optional texture path.
+- `catalog` and `catalog_material`: use the exact catalog and material `id`
+  returned by `find_materials`. Set both together. Catalog materials are an opt-in visual
+  enhancement; ordinary `rgba` and `texture` materials remain first-class.
+- `parameters`: optional catalog-declared overrides. Do not invent keys.
+- Read `material-catalogs.md` for selection, fallback, and textured-material
+  behavior. The agent never needs to inspect a material USD file.
 
 ### `Visual`
 
@@ -218,6 +227,13 @@ contact material and density for USD export. When a part has no explicit
 compiled collision geometry and this density. Explicit `Inertial` values take
 precedence.
 
+Leaving `physics_material=None` selects the generic fallback values above. This
+keeps an asset simulatable but is not a material inference. Prefer an explicitly
+named `PhysicsMaterial` whenever the part's bulk/contact material is known.
+OpenUSD export authors both standard `physics:density` and the contact
+coefficients. URDF receives the resolved mass properties because core URDF has
+no portable density/contact-material representation.
+
 ## Motion
 
 ### `MotionLimits`
@@ -241,10 +257,24 @@ MotionLimits(
 MotionProperties(
     damping: float | None = None,
     friction: float | None = None,
+    stiffness: float | None = None,
+    equilibrium: float | None = None,
 )
 ```
 
-Both fields are optional.
+- `damping`, `friction`, and `stiffness` are optional, finite, and non-negative.
+- `equilibrium` is an optional finite target position in radians for angular
+  joints or meters for prismatic joints.
+- `None` means unspecified and may trigger a compile warning.
+- `0.0` explicitly requests an undamped or frictionless joint.
+- Angular damping uses `N*m*s/rad`; linear damping uses `N*s/m`.
+- Angular friction uses `N*m`; linear friction uses `N`.
+- URDF exports these values through `<dynamics>`.
+- OpenUSD exports damping through standard `PhysicsDriveAPI` with zero
+- stiffness and target velocity. Nonzero `stiffness` and `equilibrium` create a
+  standard passive position drive. Coulomb friction is preserved as
+  `articraft:jointFriction` because OpenUSD Physics has no engine-neutral joint
+  friction attribute.
 
 ### `Mimic`
 

@@ -1,0 +1,61 @@
+entries:
+  - id: wood_001
+    name: Natural Tan Fine Grain
+    description: Light tan wood with soft vertical grain, mild tonal variation, and a few narrow dark streaks.
+  - id: wood_003
+    name: Warm Honey Linear Grain
+    description: Warm honey-brown wood with dense, straight vertical grain and even coloration.
+  - id: wood_006
+    name: Dark Brown Flowing Grain
+    description: Deep brown wood with subdued flowing vertical grain and low color contrast.
+  - id: wood_014
+    name: Light Rustic Swirl Grain
+    description: Light brown wood with prominent wavy growth rings, broad swirls, and visible knots.
+  - id: wood_016
+    name: Weathered Dark Swirl Grain
+    description: Muted dark brown wood with strong wavy grain, scattered knots, scratches, and worn patches.
+  - id: wood_017
+    name: Pale Swirl Grain
+    description: Pale beige wood with crisp flowing growth rings and frequent small knots.
+  - id: wood_021
+    name: Plain Light Wood
+    description: Light beige wood with very fine, nearly uniform grain and minimal visual contrast.
+  - id: wood_026
+    name: Rich Reddish Brown Wood
+    description: Rich reddish-brown wood with smooth, subtle horizontal grain and gentle tonal bands.
+  - id: wood_027
+    name: Deep Chocolate Wood
+    description: Very dark chocolate-brown wood with restrained horizontal grain and an even finish.
+  - id: wood_030
+    name: Golden Brown Wood
+    description: Saturated golden-brown wood with fine horizontal grain and soft natural variation.
+  - id: wood_031
+    name: Pale Knotty Wood
+    description: Pale unfinished wood with irregular warm streaks and numerous prominent dark knots.
+  - id: wood_036
+    name: Worn Dark Brown Wood
+    description: Dark brown wood with broad rubbed grain, subtle scratches, and a gently weathered surface.
+  - id: wood_041
+    name: Light Block Grain Wood
+    description: Light gray-beige wood assembled in short blocks with clearly visible linear grain.
+  - id: wood_046
+    name: Aged Pale Plank Wood
+    description: Pale warm wood with long straight growth lines, occasional knots, stains, and light wear.
+  - id: wood_052
+    name: Orange Wavy Grain Wood
+    description: Bright orange-toned wood with broad, high-contrast wavy grain and a bold decorative look.
+  - id: wood_057
+    name: Heavily Scratched Pale Wood
+    description: Pale peach-brown wood covered with dense multidirectional scratches and worn surface marks.
+  - id: wood_058
+    name: Weathered Vertical Grain Wood
+    description: Medium warm-brown wood with long vertical grain, dark pores, and fine weathered scratches.
+  - id: wood_062
+    name: Rough Charcoal Wood
+    description: Charcoal-brown wood with coarse horizontal fibers, deep grooves, and a rough unfinished surface.
+  - id: wood_067
+    name: Very Dark Rough Wood
+    description: Near-black brown wood with broad horizontal grain and a coarse matte surface.
+  - id: wood_091b
+    name: Smooth Pale Golden Wood
+    description: Pale golden wood with soft horizontal waves, fine pores, and a clean smooth appearance.

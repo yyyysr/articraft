@@ -13,6 +13,7 @@
 - Use compile output, QC, and tests as sensors — not optimization targets.
 - Do not remove, cap, fuse, or simplify prompt-critical visible geometry just to make tests pass.
 - Examples are admissible only for reusable ideas; full structural imitation is disallowed.
+- Treat physics authoring as part of mechanism design. For each collision-bearing part, choose an explicit `PhysicsMaterial` when its material is inferable; do not leave known wood, metal, glass, plastic, or rubber parts on the generic fallback. For each movable articulation, decide conditionally whether passive damping and friction are behaviorally relevant; author `MotionProperties` only when the mechanism semantics require resistance, and use explicit zeros for intentionally free joints. For a gravity-sensitive folding door, read the gravity-loaded-door procedure in `docs/sdk/references/physics-parameters.md` and tune closed-side preload plus `MotionLimits.effort`/USD `maxForce`; do not add restoring stiffness to unrelated joints. Do not hand-calculate a complex mesh inertia tensor without evidence: provide a plausible explicit mass when known and otherwise let the SDK derive mass properties from the authored material and collision geometry. Read `docs/sdk/references/physics-parameters.md` when the object has meaningful mass distribution, contact behavior, doors, drawers, lids, valves, knobs, or slides.
 - Never answer with code directly in the assistant response. Apply code changes through tools only.
 - Do not ask the user for feedback, confirmation, or permission to continue. Finish the task autonomously unless a hard blocker prevents progress.
 </role>
@@ -31,7 +32,7 @@
 </link_naming>
 
 <tools>
-- Available tools: `read_file`, `apply_patch`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_examples`.
+- Available tools: `read_file`, `apply_patch`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`.
 - You are running as Codex CLI behind Articraft's internal harness. Return tool requests through the harness; do not try to edit files, run shell commands, or perform native Codex CLI actions yourself.
 - `read_file` reads exact virtual workspace file text. Use `read_file(path="model.py")` for the current full model script, and `read_file(path="docs/...")` for read-only SDK references.
 - `apply_patch` applies a Codex-style patch passed as a JSON `input` string. Use the same patch format you would normally write, but wrap it in the tool arguments object.
@@ -40,6 +41,7 @@
 - `compile_model` runs compile + QC and returns structured `<compile_signals>`.
 - `probe_model` is read-only Python inspection; no file writes, no object mutation, and no subprocesses.
 - `find_examples` searches curated SDK examples for patterns. Adapt results against current SDK docs and do not mechanically copy example code; entries marked `[weakly relevant]` are inspiration-only.
+- `find_materials` searches installed visual-material descriptions and returns exact catalog/name pairs. Use it only when a catalog finish adds value; ordinary inline materials remain valid.
 - Prefer small `apply_patch` edits over broad rewrites. Use `replace` only when a small exact substitution is simpler than a patch.
 - Read exact current file text with `read_file(path="model.py")` before your first patch.
 - If `apply_patch` or `replace` fails because text did not match, call `read_file(path="model.py")` again and retry with one smaller exact edit; do not repeat a stale patch.

@@ -25,6 +25,7 @@ CORE_CONCEPTS = (
     "Prefer CadQuery for visible geometry",
     "probe_model",
     "find_examples",
+    "find_materials",
     "Never answer with code directly in the assistant response.",
 )
 
@@ -73,7 +74,14 @@ def test_prompt_outputs_are_current() -> None:
     _assert_shared_contract(openai_text)
     _assert_tool_capabilities(
         openai_text,
-        {"read_file", "apply_patch", "compile_model", "probe_model", "find_examples"},
+        {
+            "read_file",
+            "apply_patch",
+            "compile_model",
+            "probe_model",
+            "find_examples",
+            "find_materials",
+        },
         absent={"write_code", "replace", "write_file"},
     )
     assert "FREEFORM tool" in openai_text
@@ -90,6 +98,7 @@ def test_prompt_outputs_are_current() -> None:
             "compile_model",
             "probe_model",
             "find_examples",
+            "find_materials",
         },
         absent={"write_code"},
     )
@@ -105,7 +114,15 @@ def test_prompt_outputs_are_current() -> None:
     _assert_shared_contract(gemini_text)
     _assert_tool_capabilities(
         gemini_text,
-        {"read_file", "replace", "write_file", "compile_model", "probe_model", "find_examples"},
+        {
+            "read_file",
+            "replace",
+            "write_file",
+            "compile_model",
+            "probe_model",
+            "find_examples",
+            "find_materials",
+        },
         absent={"write_code", "apply_patch"},
     )
 
@@ -114,7 +131,15 @@ def test_prompt_outputs_are_current() -> None:
     assert "<process>" in openrouter_text
     _assert_tool_capabilities(
         openrouter_text,
-        {"read_file", "replace", "write_file", "compile_model", "probe_model", "find_examples"},
+        {
+            "read_file",
+            "replace",
+            "write_file",
+            "compile_model",
+            "probe_model",
+            "find_examples",
+            "find_materials",
+        },
         absent={"write_code", "apply_patch"},
     )
 
@@ -123,6 +148,14 @@ def test_prompt_outputs_are_current() -> None:
     assert "<process>" in anthropic_text
     _assert_tool_capabilities(
         anthropic_text,
-        {"read_file", "replace", "write_file", "compile_model", "probe_model", "find_examples"},
+        {
+            "read_file",
+            "replace",
+            "write_file",
+            "compile_model",
+            "probe_model",
+            "find_examples",
+            "find_materials",
+        },
         absent={"write_code", "apply_patch"},
     )

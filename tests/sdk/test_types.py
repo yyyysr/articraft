@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from sdk import ArticulatedObject, Box, Cylinder, Material, ValidationError
+from sdk import ArticulatedObject, Box, Cylinder, Material, MotionProperties, ValidationError
 
 
 def test_part_get_visual_returns_named_visual() -> None:
@@ -83,3 +83,28 @@ def test_material_preserves_positional_rgba_usage() -> None:
     material = Material("paint", (0.1, 0.2, 0.3, 1.0))
 
     assert material.rgba == (0.1, 0.2, 0.3, 1.0)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("damping", -0.1),
+        ("friction", -0.1),
+        ("stiffness", -0.1),
+        ("damping", float("inf")),
+        ("equilibrium", float("inf")),
+    ),
+)
+def test_motion_properties_reject_invalid_values(field: str, value: float) -> None:
+    with pytest.raises(ValidationError, match=f"motion_properties.{field}"):
+        MotionProperties(**{field: value})
+
+
+def test_motion_properties_distinguishes_unspecified_from_explicit_zero() -> None:
+    unspecified = MotionProperties()
+    frictionless = MotionProperties(damping=0.0, friction=0.0)
+
+    assert unspecified.damping is None
+    assert unspecified.friction is None
+    assert frictionless.damping == 0.0
+    assert frictionless.friction == 0.0

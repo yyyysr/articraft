@@ -65,6 +65,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
                 layout.record_materialization_usd_path(record_id),
                 layout.record_materialization_compile_report_path(record_id),
                 layout.record_materialization_assets_dir(record_id),
+                layout.record_materialization_textures_dir(record_id),
                 layout.record_materialization_asset_meshes_dir(record_id),
                 layout.record_materialization_asset_glb_dir(record_id),
                 layout.record_materialization_asset_viewer_dir(record_id),
@@ -93,6 +94,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
             self.repo.layout.record_materialization_asset_meshes_dir(record_id),
             self.repo.layout.record_materialization_asset_glb_dir(record_id),
             self.repo.layout.record_materialization_asset_viewer_dir(record_id),
+            self.repo.layout.record_materialization_textures_dir(record_id),
         ):
             _remove_path_if_exists(path)
 
@@ -277,7 +279,11 @@ class ViewerMaterializationStore(ViewerStoreComponent):
                     compile_path=compile_path,
                 )
 
-            from agent.compiler import compile_urdf_report, compile_urdf_report_maybe_timeout
+            from agent.compiler import (
+                compile_urdf_report,
+                compile_urdf_report_maybe_timeout,
+                persist_usd_assets,
+            )
             from agent.feedback import (
                 build_compile_signal_bundle,
                 compile_signal_bundle_from_exception,
@@ -335,6 +341,7 @@ class ViewerMaterializationStore(ViewerStoreComponent):
             if isinstance(compile_result.usd_bytes, (bytes, bytearray)):
                 usd_path.parent.mkdir(parents=True, exist_ok=True)
                 usd_path.write_bytes(bytes(compile_result.usd_bytes))
+                persist_usd_assets(compile_result.usd_assets, usd_path.parent)
             self._promote_local_materialization_outputs(
                 record_id,
                 record_dir=record_dir,

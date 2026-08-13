@@ -5,10 +5,50 @@ from pathlib import Path
 
 import pytest
 
-from agent.compiler import compile_urdf_report, persist_compile_success_artifacts, update_manifest
+from agent.compiler import (
+    _physics_authoring_warnings,
+    compile_urdf_report,
+    compile_urdf_report_maybe_timeout,
+    persist_compile_success_artifacts,
+    update_manifest,
+)
 from agent.runner import compile_urdf
+from sdk import ArticulatedObject, ArticulationType, MotionLimits, MotionProperties, PhysicsMaterial
 
 _REMOVED_PACKAGE = "_".join(("sdk", "hybrid"))
+
+
+def test_physics_authoring_warnings_report_only_implicit_fallbacks() -> None:
+    model = ArticulatedObject(name="physics_warnings")
+    base = model.part("base")
+    free_door = model.part("free_door")
+    damped_door = model.part("damped_door", physics_material=PhysicsMaterial("wood"))
+    model.articulation(
+        "free_hinge",
+        ArticulationType.REVOLUTE,
+        parent=base,
+        child=free_door,
+        motion_limits=MotionLimits(lower=0.0, upper=1.0),
+    )
+    model.articulation(
+        "damped_hinge",
+        ArticulationType.REVOLUTE,
+        parent=base,
+        child=damped_door,
+        motion_limits=MotionLimits(lower=0.0, upper=1.0),
+        motion_properties=MotionProperties(damping=0.0, friction=0.0),
+    )
+
+    warnings = _physics_authoring_warnings({"object_model": model})
+
+    assert len(warnings) == 2
+    assert "2 part(s) use the generic PhysicsMaterial fallback" in warnings[0]
+    assert "'base'" in warnings[0]
+    assert "'free_door'" in warnings[0]
+    assert "damped_door" not in warnings[0]
+    assert "1 movable joint(s) have no MotionProperties" in warnings[1]
+    assert "free_hinge" in warnings[1]
+    assert "damped_hinge" not in warnings[1]
 
 
 def _write_isolated_part_model_script(
@@ -149,6 +189,7 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
         urdf_xml="<robot name='sample'/>",
         urdf_out=urdf_path,
         usd_bytes=b"PXR-USDC sample",
+        usd_assets={"textures/Wood001_1K-PNG_Color.png": b"png-data"},
         usd_out=usd_path,
         outputs_root=outputs_root,
     )
@@ -156,6 +197,7 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
     assert sig is not None
     assert urdf_path.read_text(encoding="utf-8") == "<robot name='sample'/>"
     assert usd_path.read_bytes() == b"PXR-USDC sample"
+    assert (run_dir / "textures" / "Wood001_1K-PNG_Color.png").read_bytes() == b"png-data"
 
     manifest = json.loads((outputs_root / "manifest.json").read_text(encoding="utf-8"))
     assert manifest == {
@@ -171,6 +213,7 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
         urdf_xml="<robot name='sample'/>",
         urdf_out=urdf_path,
         usd_bytes=b"PXR-USDC sample",
+        usd_assets={"textures/Wood001_1K-PNG_Color.png": b"png-data"},
         usd_out=usd_path,
         outputs_root=outputs_root,
         previous_sig=sig,
@@ -198,6 +241,33 @@ def test_compile_artifacts_update_manifest(tmp_path: Path) -> None:
     }
 
     assert callable(compile_urdf)
+
+
+def test_compile_report_carries_only_used_catalog_textures(tmp_path: Path) -> None:
+    script_path = tmp_path / "model.py"
+    script_path.write_text(
+        "\n".join(
+            [
+                "from sdk import ArticulatedObject, Box",
+                "object_model = ArticulatedObject(name='wood_panel')",
+                "finish = object_model.material(",
+                "    'wood_finish', catalog='wood_furniture', catalog_material='wood_001'",
+                ")",
+                "object_model.part('body').visual(Box((0.4, 0.3, 0.2)), material=finish)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = compile_urdf_report_maybe_timeout(script_path, run_checks=False)
+
+    assert report.usd_bytes
+    assert set(report.usd_assets) == {
+        "textures/Wood001_1K-PNG_Color.png",
+        "textures/Wood001_1K-PNG_Displacement.png",
+        "textures/Wood001_1K-PNG_NormalGL.png",
+        "textures/Wood001_1K-PNG_Roughness.png",
+    }
 
 
 def test_compile_urdf_report_can_skip_required_checks(tmp_path: Path) -> None:
@@ -438,7 +508,7 @@ def test_compile_urdf_report_preserves_run_test_warnings_on_success(tmp_path: Pa
     report = compile_urdf_report(script_path, run_checks=True, target="full")
 
     assert "<robot" in report.urdf_xml
-    assert report.warnings == ["custom non-blocking warning"]
+    assert "custom non-blocking warning" in report.warnings
     assert report.signal_bundle.status == "success"
 
 
@@ -477,10 +547,14 @@ def test_compile_urdf_report_preserves_disconnected_geometry_warnings_on_success
 
     assert "<robot" in report.urdf_xml
     assert report.signal_bundle.status == "success"
-    assert report.warnings == [
-        "warn_if_part_contains_disconnected_geometry_islands(tol=1e-06): "
-        "Disconnected geometry islands detected:\npart='controls' connected=1/19"
-    ]
+    assert any(
+        warning
+        == (
+            "warn_if_part_contains_disconnected_geometry_islands(tol=1e-06): "
+            "Disconnected geometry islands detected:\npart='controls' connected=1/19"
+        )
+        for warning in report.warnings
+    )
 
 
 def test_compile_urdf_report_keeps_disconnected_geometry_as_warning_with_isolated_part_allowance(
@@ -612,6 +686,43 @@ def test_compile_urdf_report_preserves_visual_obj_meshes_by_default(tmp_path: Pa
     assert "assets/meshes/part.glb" not in report.urdf_xml
     assert not (tmp_path / "assets" / "meshes" / "part.glb").exists()
     assert report.signal_bundle.status == "success"
+
+
+def test_compile_urdf_report_normalizes_legacy_materialized_mesh_filename(
+    tmp_path: Path,
+) -> None:
+    script_path = tmp_path / "model.py"
+    script_path.write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "",
+                "from sdk import AssetContext, ArticulatedObject, BoxGeometry, Mesh, mesh_from_geometry",
+                "",
+                "ASSETS = AssetContext.from_script(__file__)",
+                "exported = mesh_from_geometry(",
+                "    BoxGeometry((0.1, 0.1, 0.1)),",
+                "    ASSETS.mesh_path('part.obj'),",
+                ")",
+                "object_model = ArticulatedObject(name='legacy_mesh', assets=ASSETS)",
+                "base = object_model.part('base')",
+                "base.visual(",
+                "    Mesh(",
+                "        filename=exported.materialized_path,",
+                "        name=exported.name,",
+                "        materialized_path=exported.materialized_path,",
+                "    ),",
+                "    name='part',",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = compile_urdf_report(script_path, run_checks=False, target="visual")
+
+    assert 'filename="assets/meshes/part.obj"' in report.urdf_xml
+    assert str(tmp_path) not in report.urdf_xml
 
 
 def test_compile_urdf_report_auto_suffixes_managed_mesh_name_conflicts(tmp_path: Path) -> None:

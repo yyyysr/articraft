@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -18,6 +19,12 @@ from .geometry_qc import (
     _mat4_mul,
     _origin_to_mat4,
     compute_part_world_transforms,
+)
+from .material_catalog import (
+    catalog_texture_assets,
+    copy_catalog_material,
+    resolve_material_entry,
+    validate_material_parameters,
 )
 from .types import (
     Articulation,
@@ -75,6 +82,7 @@ def compile_object_to_usd_file(
 
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
+    _copy_catalog_textures(compiled_model, output.parent)
     author_path = output
     temporary_ascii: Path | None = None
     if binary and output.suffix.lower() == ".usd":
@@ -130,6 +138,9 @@ def compile_object_to_usd_file(
         body.GetPrim().CreateAttribute("articraft:partName", Sdf.ValueTypeNames.String).Set(
             part.name
         )
+        body.GetPrim().CreateAttribute(
+            "articraft:physicsMaterialSource", Sdf.ValueTypeNames.Token
+        ).Set("explicit" if part.physics_material is not None else "generic_default")
         inertial, inertial_source = resolve_part_inertial(part, asset_root=resolved_assets)
         _apply_rigid_body(body, inertial=inertial, source=inertial_source)
 
@@ -219,6 +230,23 @@ def compile_object_to_usd_bytes(
     validate: bool = True,
 ) -> bytes:
     """Compile an object model and return compact model.usd bytes."""
+    usd_bytes, _assets = compile_object_to_usd_package(
+        object_model,
+        asset_root=asset_root,
+        include_physical_collisions=include_physical_collisions,
+        validate=validate,
+    )
+    return usd_bytes
+
+
+def compile_object_to_usd_package(
+    object_model: ArticulatedObject,
+    *,
+    asset_root: object = None,
+    include_physical_collisions: bool = True,
+    validate: bool = True,
+) -> tuple[bytes, dict[str, bytes]]:
+    """Compile model.usd and return its relative texture payloads."""
     with tempfile.TemporaryDirectory(prefix="articraft-usd-") as tmp:
         path = Path(tmp) / "model.usd"
         compile_object_to_usd_file(
@@ -228,7 +256,28 @@ def compile_object_to_usd_bytes(
             include_physical_collisions=include_physical_collisions,
             validate=validate,
         )
-        return path.read_bytes()
+        assets = {
+            file.relative_to(tmp).as_posix(): file.read_bytes()
+            for file in (Path(tmp) / "textures").glob("*.png")
+        }
+        return path.read_bytes(), assets
+
+
+def _copy_catalog_textures(model: ArticulatedObject, output_dir: Path) -> None:
+    assets: dict[str, Path] = {}
+    for material in _iter_materials(model):
+        if not material.catalog:
+            continue
+        entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+        for relative_path, source in catalog_texture_assets(entry).items():
+            previous = assets.get(relative_path)
+            if previous is not None and previous != source:
+                raise ValidationError(f"Catalog texture filename collision: {relative_path}")
+            assets[relative_path] = source
+    for relative_path, source in assets.items():
+        destination = output_dir / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
 
 
 def _define_materials(
@@ -242,6 +291,12 @@ def _define_materials(
             continue
         token = _unique_identifier(material.name, used_names)
         path = Sdf.Path(f"{USD_ROOT_PATH}/{USD_LOOKS_SCOPE}/{token}")
+        if material.catalog:
+            entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+            validate_material_parameters(entry, material.parameters)
+            copy_catalog_material(stage, entry, path)
+            paths[material.name] = path
+            continue
         usd_material = UsdShade.Material.Define(stage, str(path))
         shader = UsdShade.Shader.Define(stage, str(path.AppendChild("Shader")))
         shader.CreateIdAttr("UsdPreviewSurface")
@@ -298,6 +353,18 @@ def _define_geometry_prim(
     if isinstance(geometry, Box):
         prim = UsdGeom.Cube.Define(stage, str(path))
         prim.CreateSizeAttr(1.0)
+        st = UsdGeom.PrimvarsAPI(prim).CreatePrimvar(
+            "st",
+            Sdf.ValueTypeNames.TexCoord2fArray,
+            UsdGeom.Tokens.faceVarying,
+        )
+        face_uvs = [
+            Gf.Vec2f(0.0, 0.0),
+            Gf.Vec2f(1.0, 0.0),
+            Gf.Vec2f(1.0, 1.0),
+            Gf.Vec2f(0.0, 1.0),
+        ]
+        st.Set(Vt.Vec2fArray(face_uvs * 6))
         transform = _mat4_mul(
             _origin_to_mat4(origin),
             _scale_mat4(tuple(float(value) for value in geometry.size)),
@@ -415,6 +482,9 @@ def _physics_material_path_for_part(
     physics_api.CreateStaticFrictionAttr(float(material.static_friction))
     physics_api.CreateDynamicFrictionAttr(float(material.dynamic_friction))
     physics_api.CreateRestitutionAttr(float(material.restitution))
+    physics_api.CreateDensityAttr(float(material.density))
+    # Preserve the legacy attribute for consumers that used Articraft USDs
+    # before density was authored through the standard MaterialAPI schema.
     usd_material.GetPrim().CreateAttribute("articraft:density", Sdf.ValueTypeNames.Float).Set(
         float(material.density)
     )
@@ -473,6 +543,69 @@ def _define_joint(
     joint.GetPrim().CreateAttribute("articraft:jointName", Sdf.ValueTypeNames.String).Set(
         articulation.name
     )
+    _apply_joint_motion_properties(joint.GetPrim(), articulation)
+
+
+def _apply_joint_motion_properties(prim: Usd.Prim, articulation: Articulation) -> None:
+    properties = articulation.motion_properties
+    if properties is None:
+        return
+
+    if properties.friction is not None:
+        # OpenUSD Physics has no engine-neutral Coulomb joint-friction field.
+        # Keep the authored intent available without introducing PhysxSchema.
+        prim.CreateAttribute("articraft:jointFriction", Sdf.ValueTypeNames.Float).Set(
+            float(properties.friction)
+        )
+
+    if properties.stiffness is not None:
+        prim.CreateAttribute("articraft:jointStiffness", Sdf.ValueTypeNames.Float).Set(
+            float(properties.stiffness)
+        )
+    if properties.equilibrium is not None:
+        prim.CreateAttribute("articraft:jointEquilibrium", Sdf.ValueTypeNames.Float).Set(
+            float(properties.equilibrium)
+        )
+
+    if (
+        properties.damping is None
+        and properties.stiffness is None
+        and properties.equilibrium is None
+    ):
+        return
+
+    if articulation.articulation_type in {
+        ArticulationType.REVOLUTE,
+        ArticulationType.CONTINUOUS,
+    }:
+        drive_name = UsdPhysics.Tokens.angular
+        # Articraft/URDF angular damping is torque per radian/second, while
+        # angular DriveAPI position and velocity values are degree based.
+        damping = 0.0 if properties.damping is None else float(properties.damping) * math.pi / 180.0
+        stiffness = (
+            0.0 if properties.stiffness is None else float(properties.stiffness) * math.pi / 180.0
+        )
+        target_position = (
+            0.0
+            if properties.equilibrium is None
+            else float(properties.equilibrium) * 180.0 / math.pi
+        )
+    elif articulation.articulation_type == ArticulationType.PRISMATIC:
+        drive_name = UsdPhysics.Tokens.linear
+        damping = 0.0 if properties.damping is None else float(properties.damping)
+        stiffness = 0.0 if properties.stiffness is None else float(properties.stiffness)
+        target_position = 0.0 if properties.equilibrium is None else float(properties.equilibrium)
+    else:
+        return
+
+    drive = UsdPhysics.DriveAPI.Apply(prim, drive_name)
+    drive.CreateTypeAttr(UsdPhysics.Tokens.force)
+    drive.CreateStiffnessAttr(stiffness)
+    drive.CreateDampingAttr(damping)
+    drive.CreateTargetPositionAttr(target_position)
+    drive.CreateTargetVelocityAttr(0.0)
+    if articulation.motion_limits is not None:
+        drive.CreateMaxForceAttr(float(articulation.motion_limits.effort))
 
 
 def _angular_limits_degrees(
@@ -584,4 +717,8 @@ def _ascii_identifier(raw_name: str) -> str:
     return "_".join(text.split()).strip("_") or "prim"
 
 
-__all__ = ["compile_object_to_usd_bytes", "compile_object_to_usd_file"]
+__all__ = [
+    "compile_object_to_usd_bytes",
+    "compile_object_to_usd_file",
+    "compile_object_to_usd_package",
+]

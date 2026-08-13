@@ -1,0 +1,11 @@
+id: builtin_openpbr
+version: 1
+profile: openpbr_materialx
+library: materials_libs_v2.usd
+portable_fallback: preview_surface
+source:
+  repository: NVIDIA-Omniverse/usd-content-agents
+  commit: f45214c70fdb01e0e98aa6c4bb4548b367619bc3
+disabled_entries:
+  - name: Copper Brushed
+    reason: unresolved external normal texture dependency in the upstream USD

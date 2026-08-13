@@ -4,7 +4,7 @@ import math
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .assets import AssetContext, coerce_asset_context
 from .errors import ValidationError
@@ -142,6 +142,9 @@ class Material:
     name: str
     rgba: Optional[Tuple[float, float, float, float]] = None
     texture: Optional[str] = None
+    catalog: Optional[str] = None
+    catalog_material: Optional[str] = None
+    parameters: Dict[str, object] = field(default_factory=dict)
 
     def __init__(
         self,
@@ -150,12 +153,20 @@ class Material:
         texture: Optional[str] = None,
         *,
         color: Optional[Sequence[float]] = None,
+        catalog: Optional[str] = None,
+        catalog_material: Optional[str] = None,
+        parameters: Optional[Mapping[str, object]] = None,
     ) -> None:
         if rgba is not None and color is not None:
             raise ValidationError("Material cannot set both rgba and color")
         self.name = str(name)
         self.rgba = _normalize_material_rgba(rgba if rgba is not None else color)
         self.texture = texture
+        self.catalog = str(catalog).strip() if catalog is not None else None
+        self.catalog_material = (
+            str(catalog_material).strip() if catalog_material is not None else None
+        )
+        self.parameters = dict(parameters or {})
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -163,6 +174,12 @@ class Material:
         if not self.name:
             raise ValidationError("material.name is required")
         self.rgba = _normalize_material_rgba(self.rgba)
+        if bool(self.catalog) != bool(self.catalog_material):
+            raise ValidationError("Material must set both catalog and catalog_material, or neither")
+        if self.catalog and self.texture:
+            raise ValidationError(
+                "Catalog materials cannot also set an inline texture; use catalog parameters"
+            )
 
 
 @dataclass(frozen=True)
@@ -318,8 +335,33 @@ class MotionLimits:
 
 @dataclass(frozen=True)
 class MotionProperties:
+    """Passive joint dynamics in SI units.
+
+    ``damping`` is viscous damping (N*m*s/rad for angular joints and N*s/m
+    for linear joints). ``friction`` is Coulomb friction (N*m for angular
+    joints and N for linear joints). ``None`` means unspecified; ``0.0`` is an
+    explicit frictionless or undamped joint.
+    """
+
     damping: Optional[float] = None
     friction: Optional[float] = None
+    stiffness: Optional[float] = None
+    equilibrium: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        for name in ("damping", "friction", "stiffness"):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            normalized = float(value)
+            if not math.isfinite(normalized) or normalized < 0.0:
+                raise ValidationError(f"motion_properties.{name} must be finite and non-negative")
+            object.__setattr__(self, name, normalized)
+        if self.equilibrium is not None:
+            equilibrium = float(self.equilibrium)
+            if not math.isfinite(equilibrium):
+                raise ValidationError("motion_properties.equilibrium must be finite")
+            object.__setattr__(self, "equilibrium", equilibrium)
 
 
 @dataclass(frozen=True)

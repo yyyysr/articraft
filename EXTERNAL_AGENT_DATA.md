@@ -65,7 +65,7 @@ Allowed external agent ids are:
 When the user asks you to modify an existing Articraft asset, fork it instead of manually copying record folders:
 
 ```bash
-uv run articraft fork <record_id> "make the handle longer"
+uv run articraft external fork <record_id> "make the handle longer"
 ```
 
 Forking creates a child record and leaves the parent unchanged.

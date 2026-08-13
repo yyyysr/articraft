@@ -88,6 +88,7 @@ class OpenAILLM:
         self.reasoning_effort = _effort_from_thinking_level(thinking_level)
         self.reasoning_summary = _normalize_reasoning_summary(reasoning_summary)
         self.transport = _normalize_transport(transport)
+        self.stream = _env_bool("OPENAI_STREAM", default=False)
         self.prompt_cache_key = _normalize_prompt_cache_key(prompt_cache_key)
         self.prompt_cache_retention = _normalize_prompt_cache_retention(prompt_cache_retention)
         self.store = self.transport == "websocket" if store is None else bool(store)
@@ -501,6 +502,8 @@ class OpenAILLM:
             request_payload["prompt_cache_retention"] = self.prompt_cache_retention
         if previous_response_id:
             request_payload["previous_response_id"] = previous_response_id
+        if self.stream and self.transport == "http":
+            request_payload["stream"] = True
         return request_payload
 
     def _build_token_count_payload(self, request_payload: dict[str, Any]) -> dict[str, Any]:
@@ -604,8 +607,41 @@ class OpenAILLM:
         if self._client is None:
             raise RuntimeError("OpenAI HTTP transport is unavailable in dry_run mode")
         if self._client_is_async:
-            return await self._client.responses.create(**request_payload)
-        return await asyncio.to_thread(self._client.responses.create, **request_payload)
+            response = await self._client.responses.create(**request_payload)
+            if self.stream:
+                return await self._collect_async_response_stream(response)
+            return response
+        response = await asyncio.to_thread(self._client.responses.create, **request_payload)
+        if self.stream:
+            return await asyncio.to_thread(self._collect_sync_response_stream, response)
+        return response
+
+    async def _collect_async_response_stream(self, stream: Any) -> Any:
+        async for event in stream:
+            response = self._response_from_stream_event(event)
+            if response is not None:
+                return response
+        raise RuntimeError("OpenAI response stream ended without a completed response")
+
+    def _collect_sync_response_stream(self, stream: Any) -> Any:
+        for event in stream:
+            response = self._response_from_stream_event(event)
+            if response is not None:
+                return response
+        raise RuntimeError("OpenAI response stream ended without a completed response")
+
+    def _response_from_stream_event(self, event: Any) -> Any | None:
+        event_type = _response_value(event, "type")
+        if event_type in {"response.completed", "response.incomplete"}:
+            response = _response_value(event, "response")
+            if response is None:
+                raise RuntimeError(f"OpenAI {event_type} event did not include a response payload")
+            return self._coerce_response_object(response)
+        if event_type in {"response.failed", "error"}:
+            response = _response_value(event, "response")
+            message = _response_error_message(response) or _response_value(event, "message")
+            raise RuntimeError(message or "OpenAI response failed while streaming")
+        return None
 
     async def _request_with_transport(
         self,
@@ -983,6 +1019,13 @@ def _env_float(name: str, default: float) -> float:
         return float(raw.strip())
     except Exception:
         return default
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _env_int_or_none(name: str) -> int | None:

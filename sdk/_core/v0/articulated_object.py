@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Union
 
 from .assets import AssetContext, AssetSession, coerce_asset_context, resolve_asset_context
 from .errors import ValidationError
@@ -216,6 +216,9 @@ class ArticulatedObject:
         rgba: Optional[Sequence[float]] = None,
         color: Optional[Sequence[float]] = None,
         texture: Optional[str] = None,
+        catalog: Optional[str] = None,
+        catalog_material: Optional[str] = None,
+        parameters: Optional[Mapping[str, object]] = None,
     ) -> Material:
         if rgba is not None and color is not None:
             raise ValidationError("Material cannot set both rgba and color")
@@ -226,6 +229,9 @@ class ArticulatedObject:
                 field_name="Material rgba",
             ),
             texture=texture,
+            catalog=catalog,
+            catalog_material=catalog_material,
+            parameters=parameters,
         )
         self.materials.append(material)
         return material
@@ -604,3 +610,10 @@ def _validate_material(material: Material, context: str) -> None:
         raise ValidationError(f"{context} name is required")
     if material.rgba is not None and len(material.rgba) not in (3, 4):
         raise ValidationError(f"{context} rgba must have 3 or 4 values")
+    if bool(material.catalog) != bool(material.catalog_material):
+        raise ValidationError(f"{context} must set catalog and catalog_material together")
+    if material.catalog:
+        from .material_catalog import resolve_material_entry, validate_material_parameters
+
+        entry = resolve_material_entry(material.catalog, material.catalog_material or "")
+        validate_material_parameters(entry, material.parameters)

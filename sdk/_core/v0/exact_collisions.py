@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional
 
 from .assets import AssetContext, coerce_asset_context, resolve_asset_root
 from .errors import ValidationError
-from .types import Box, Collision, Cylinder, Mesh, Origin, Part, Sphere, Visual
+from .types import Box, Collision, Cylinder, Material, Mesh, Origin, Part, Sphere, Visual
 
 if TYPE_CHECKING:
     from .articulated_object import ArticulatedObject
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 _COMPILED_MODEL_CACHE_ATTR = "_sdk_exact_collision_model_cache"
 _ALLOW_EXPLICIT_COLLISIONS_ATTR = "_sdk_allow_explicit_collisions"
-_CACHE_VERSION = 8
+_CACHE_VERSION = 9
 
 
 def compile_object_model_with_exact_collisions(
@@ -166,6 +166,9 @@ def _serialize_object_model(object_model: "ArticulatedObject") -> dict[str, obje
                 "name": material.name,
                 "rgba": material.rgba,
                 "texture": material.texture,
+                "catalog": material.catalog,
+                "catalog_material": material.catalog_material,
+                "parameters": material.parameters,
             }
             for material in getattr(object_model, "materials", [])
         ],
@@ -218,6 +221,8 @@ def _serialize_object_model(object_model: "ArticulatedObject") -> dict[str, obje
                     else {
                         "damping": articulation.motion_properties.damping,
                         "friction": articulation.motion_properties.friction,
+                        "stiffness": articulation.motion_properties.stiffness,
+                        "equilibrium": articulation.motion_properties.equilibrium,
                     }
                 ),
                 "mimic": (
@@ -263,10 +268,15 @@ def _serialize_geometry(geometry: Box | Cylinder | Sphere | Mesh) -> dict[str, o
 def _serialize_material_ref(value: object) -> object:
     if value is None:
         return None
-    if hasattr(value, "name"):
-        name = getattr(value, "name", None)
-        if isinstance(name, str):
-            return name
+    if isinstance(value, Material):
+        return {
+            "name": value.name,
+            "rgba": value.rgba,
+            "texture": value.texture,
+            "catalog": value.catalog,
+            "catalog_material": value.catalog_material,
+            "parameters": value.parameters,
+        }
     return str(value)
 
 

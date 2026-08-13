@@ -21,6 +21,7 @@ def test_provider_tool_registry_schemas() -> None:
         "compile_model",
         "probe_model",
         "find_examples",
+        "find_materials",
     }
     assert set(gemini_registry.get_all_tool_names()) == {
         "read_file",
@@ -29,6 +30,7 @@ def test_provider_tool_registry_schemas() -> None:
         "compile_model",
         "probe_model",
         "find_examples",
+        "find_materials",
     }
     assert set(codex_cli_registry.get_all_tool_names()) == {
         "read_file",
@@ -38,6 +40,7 @@ def test_provider_tool_registry_schemas() -> None:
         "compile_model",
         "probe_model",
         "find_examples",
+        "find_materials",
     }
     openai_schemas = openai_registry.get_tool_schemas()
     apply_patch_schema = next(s for s in openai_schemas if s.get("name") == "apply_patch")
@@ -52,6 +55,18 @@ def test_provider_tool_registry_schemas() -> None:
     )
     find_examples_schema = next(
         s for s in openai_schemas if s.get("function", {}).get("name") == "find_examples"
+    )
+    find_materials_schema = next(
+        s for s in openai_schemas if s.get("function", {}).get("name") == "find_materials"
+    )
+    assert set(find_materials_schema["function"]["parameters"]["properties"]) == {
+        "query",
+        "catalog",
+        "limit",
+    }
+    assert (
+        "does not expose usd shader paths"
+        in find_materials_schema["function"]["description"].lower()
     )
     gemini_schemas = gemini_registry.get_tool_schemas()
     codex_cli_schemas = codex_cli_registry.get_tool_schemas()
