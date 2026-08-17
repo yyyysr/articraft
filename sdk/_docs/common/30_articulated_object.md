@@ -56,6 +56,7 @@ model.part(
     name: str,
     *,
     visuals: Iterable[Visual] | None = None,
+    collision_enabled: bool = True,
     inertial: Inertial | None = None,
     physics_material: PhysicsMaterial | None = None,
     meta: dict[str, object] | None = None,
@@ -65,6 +66,10 @@ model.part(
 - Creates a `Part`, appends it to `model.parts`, and returns it.
 - The returned part is the normal place to call `part.visual(...)`.
 - `physics_material` configures density and contact properties for USD physics export.
+- `collision_enabled` defaults to `True`: primitive visuals become primitive
+  collisions and mesh visuals become mesh collisions. Set it to `False` for
+  visual-only parts such as labels, decorative inserts, or cosmetic internals.
+  This does not remove the visual or any authored inertial properties.
 
 ### `model.articulation(...)`
 

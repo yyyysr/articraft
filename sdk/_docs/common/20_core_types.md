@@ -117,6 +117,22 @@ Mesh(
 
 `filename` is required and must be non-empty.
 
+## Collision Generation
+
+Parts generate collisions from their visuals by default. Primitive visuals use
+the corresponding primitive collision; mesh visuals use a mesh collision. USD
+authors mesh collisions with the standard `convexDecomposition` approximation.
+
+Disable automatic collision generation for a visual-only part:
+
+```python
+logo = model.part("logo", collision_enabled=False)
+logo.visual(Box((0.12, 0.01, 0.08)))
+```
+
+This omits collision geometry from USD and URDF while preserving the visual and
+any authored inertial properties.
+
 ## Materials and Visuals
 
 ### `Material`

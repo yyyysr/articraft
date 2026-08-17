@@ -153,6 +153,47 @@ def test_compile_object_to_urdf_xml_normalizes_legacy_record_mesh_paths(
     assert filenames == ["assets/meshes/part.obj"]
 
 
+def test_collision_enabled_false_keeps_visuals_but_omits_usd_and_urdf_collisions(
+    tmp_path: Path,
+) -> None:
+    model = ArticulatedObject(name="visual_only_collision", assets=tmp_path)
+    logo = model.part("logo", collision_enabled=False)
+    logo.visual(Box((0.12, 0.01, 0.08)), name="logo_plate")
+
+    usd_path = tmp_path / "visual_only_collision.usd"
+    usd_path.write_bytes(compile_object_to_usd_bytes(model, asset_root=tmp_path))
+    stage = Usd.Stage.Open(str(usd_path))
+    assert stage is not None
+    assert stage.GetPrimAtPath("/root/logo/Visuals/logo_plate").IsValid()
+    assert not stage.GetPrimAtPath("/root/logo/Collisions/logo_plate").IsValid()
+
+    urdf = ET.fromstring(compile_object_to_urdf_xml(model, asset_root=tmp_path))
+    logo_link = next(link for link in urdf.findall("link") if link.attrib["name"] == "logo")
+    assert logo_link.find("visual") is not None
+    assert logo_link.find("collision") is None
+
+
+def test_usd_mesh_collision_uses_convex_decomposition(tmp_path: Path) -> None:
+    mesh_path = tmp_path / "assets" / "meshes" / "part.obj"
+    mesh_path.parent.mkdir(parents=True)
+    mesh_path.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n", encoding="utf-8")
+
+    model = ArticulatedObject(name="mesh_collision", assets=tmp_path)
+    part = model.part("mesh_part")
+    part.visual(Mesh(filename="assets/meshes/part.obj"), name="part")
+
+    usd_path = tmp_path / "mesh_collision.usd"
+    usd_path.write_bytes(compile_object_to_usd_bytes(model, asset_root=tmp_path))
+    stage = Usd.Stage.Open(str(usd_path))
+    assert stage is not None
+    collision = stage.GetPrimAtPath("/root/mesh_part/Collisions/part")
+    assert collision.IsValid()
+    assert (
+        collision.GetAttribute("physics:approximation").Get()
+        == UsdPhysics.Tokens.convexDecomposition
+    )
+
+
 def test_usd_and_urdf_export_passive_joint_dynamics(tmp_path: Path) -> None:
     model = ArticulatedObject(name="passive_joint_dynamics")
     base = model.part("base")

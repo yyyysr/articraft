@@ -54,15 +54,17 @@ def compile_object_model_with_exact_collisions(
             name=source_part.name,
             visuals=[copy.deepcopy(visual) for visual in source_part.visuals],
             collisions=[],
+            collision_enabled=source_part.collision_enabled,
             inertial=copy.deepcopy(source_part.inertial),
             physics_material=copy.deepcopy(source_part.physics_material),
             meta=copy.deepcopy(source_part.meta),
             assets=coerce_asset_context(getattr(source_part, "assets", None)) or assets,
         )
-        compiled_part.collisions = _generate_part_collisions(
-            source_part,
-            assets=compiled_part.assets or assets,
-        )
+        if source_part.collision_enabled:
+            compiled_part.collisions = _generate_part_collisions(
+                source_part,
+                assets=compiled_part.assets or assets,
+            )
         compiled.parts.append(compiled_part)
 
     if not isinstance(cached_models, dict):
@@ -175,6 +177,7 @@ def _serialize_object_model(object_model: "ArticulatedObject") -> dict[str, obje
         "parts": [
             {
                 "name": part.name,
+                "collision_enabled": part.collision_enabled,
                 "visuals": [
                     {
                         "geometry": _serialize_geometry(visual.geometry),

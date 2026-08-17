@@ -111,3 +111,14 @@ def test_compile_exact_collisions_rejects_explicit_part_collisions() -> None:
 
     with pytest.raises(ec.ValidationError, match="Part\\.collisions"):
         ec.compile_object_model_with_exact_collisions(model)
+
+
+def test_compile_exact_collisions_skips_parts_with_collision_disabled() -> None:
+    model = ArticulatedObject(name="visual_only_part")
+    part = model.part("logo", collision_enabled=False)
+    part.visual(Box((0.1, 0.01, 0.1)), name="logo_plate")
+
+    compiled = ec.compile_object_model_with_exact_collisions(model)
+
+    assert compiled.parts[0].collision_enabled is False
+    assert compiled.parts[0].collisions == []

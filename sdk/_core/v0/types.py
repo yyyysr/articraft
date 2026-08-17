@@ -388,9 +388,11 @@ class Part:
     physics_material: Optional[PhysicsMaterial] = None
     meta: Dict[str, object] = field(default_factory=dict)
     assets: Optional[AssetContext] = None
+    collision_enabled: bool = True
 
     def __post_init__(self) -> None:
         self.assets = coerce_asset_context(self.assets)
+        self.collision_enabled = bool(self.collision_enabled)
 
     def visual(
         self,
