@@ -8,11 +8,17 @@ from sdk._profiles import get_sdk_profile
 _SDK_ROUTER_SOURCE = Path("sdk/_docs/common/00_quickstart.md")
 _SDK_ROUTER_VIRTUAL_PATH = "docs/sdk/references/quickstart.md"
 _MODEL_VIRTUAL_PATH = "model.py"
-_DEFAULT_PRELOAD_PATHS = (
-    "docs/sdk/references/quickstart.md",
-    "docs/sdk/references/probe-tooling.md",
-    "docs/sdk/references/testing.md",
-)
+_DEFAULT_PRELOAD_PATHS = ("docs/sdk/references/quickstart.md",)
+
+_GENERIC_REFERENCE_OVERRIDES = {
+    "sdk/_docs/common/20_core_types.md": Path("sdk/_docs/generic/core_types.md"),
+    "sdk/_docs/common/30_articulated_object.md": Path("sdk/_docs/generic/articulated_object.md"),
+    "sdk/_docs/common/35_physics_parameters.md": Path("sdk/_docs/generic/physics_parameters.md"),
+    "sdk/_docs/common/80_testing.md": Path("sdk/_docs/generic/testing.md"),
+    "sdk/_docs/base/40_mesh_geometry.md": Path("sdk/_docs/generic/mesh_geometry.md"),
+    "sdk/_docs/base/46_section_lofts.md": Path("sdk/_docs/generic/section_lofts.md"),
+    "sdk/_docs/cadquery/35_cadquery.md": Path("sdk/_docs/generic/cadquery.md"),
+}
 
 
 @dataclass(frozen=True)
@@ -102,7 +108,7 @@ def load_sdk_docs_reference(
         "\n\n# Workspace Documentation (read-only)\n",
         "The virtual workspace exposes `model.py` as the full model artifact script and `docs/` "
         "as read-only SDK guidance.\n",
-        "`docs/sdk/references/quickstart.md` is the preloaded SDK entrypoint and reference index.\n",
+        "`docs/sdk/references/quickstart.md` is the only preloaded SDK entrypoint.\n",
         "Use `read_file(path=...)` with these virtual paths when you need exact text.\n",
     ]
     for virtual_path in preload_paths:
@@ -154,7 +160,7 @@ def _build_sdk_reference_files(
             continue
         files[f"docs/sdk/{virtual_suffix}"] = VirtualWorkspaceFile(
             virtual_path=f"docs/sdk/{virtual_suffix}",
-            disk_path=repo_root / rel_path,
+            disk_path=repo_root / _GENERIC_REFERENCE_OVERRIDES.get(rel_str, rel_path),
         )
     return files
 
@@ -170,6 +176,7 @@ def _resolve_sdk_docs_relative_path(path: str) -> str:
 
 _DOC_PATH_ALIASES = {
     "sdk/_docs/common/00_quickstart.md": "references/quickstart.md",
+    "sdk/_docs/common/05_capability_index.md": "references/capability-index.md",
     "sdk/_docs/common/10_errors.md": "references/errors.md",
     "sdk/_docs/common/20_core_types.md": "references/core-types.md",
     "sdk/_docs/common/25_material_catalogs.md": "references/material-catalogs.md",

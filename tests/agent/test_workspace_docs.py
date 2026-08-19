@@ -17,10 +17,9 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
     bundle = load_sdk_docs_bundle(repo_root, sdk_package="sdk")
 
     assert bundle.router.virtual_path == "docs/sdk/references/quickstart.md"
-    assert bundle.default_read_virtual_paths() == (
-        "docs/sdk/references/quickstart.md",
-        "docs/sdk/references/probe-tooling.md",
-        "docs/sdk/references/testing.md",
+    assert bundle.default_read_virtual_paths() == ("docs/sdk/references/quickstart.md",)
+    assert bundle.resolve("docs/sdk/references/capability-index.md").disk_path.name == (
+        "05_capability_index.md"
     )
     assert bundle.resolve("docs/sdk/references/material-catalogs.md").disk_path.name == (
         "25_material_catalogs.md"
@@ -32,11 +31,19 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
     assert "docs/sdk/references/assets.md" in bundle.files_by_path
     assert "docs/sdk/references/physics-parameters.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/mesh-geometry.md" in bundle.files_by_path
-    assert "docs/sdk/references/geometry/panels-and-grilles.md" in bundle.files_by_path
-    assert "docs/sdk/references/geometry/knobs-and-controls.md" in bundle.files_by_path
-    assert "docs/sdk/references/geometry/wheels-and-tires.md" in bundle.files_by_path
     assert "docs/sdk/references/cadquery/overview.md" in bundle.files_by_path
-    assert "docs/sdk/references/cadquery/gears.md" in bundle.files_by_path
+    assert "docs/sdk/references/geometry/panels-and-grilles.md" not in bundle.files_by_path
+    assert "docs/sdk/references/geometry/knobs-and-controls.md" not in bundle.files_by_path
+    assert "docs/sdk/references/cadquery/gears.md" not in bundle.files_by_path
+
+    assert bundle.resolve("docs/sdk/references/core-types.md").disk_path.parent.name == ("generic")
+    assert bundle.resolve("docs/sdk/references/articulated-object.md").disk_path.parent.name == (
+        "generic"
+    )
+    assert bundle.resolve("docs/sdk/references/physics-parameters.md").disk_path.parent.name == (
+        "generic"
+    )
+    assert bundle.resolve("docs/sdk/references/testing.md").disk_path.parent.name == "generic"
 
 
 def test_virtual_workspace_resolves_model_and_docs_paths(tmp_path: Path) -> None:
@@ -88,9 +95,10 @@ def test_read_file_tool_reads_virtual_model_and_docs_paths(tmp_path: Path) -> No
     model_output, docs_output = asyncio.run(_run())
 
     assert model_output == "L2: beta\nL3: gamma"
-    assert "Virtual Workspace" in docs_output
-    assert "Import from `sdk` in `model.py`." in docs_output
-    assert "geometry/knobs-and-controls.md" in docs_output
+    assert "Workspace Contract" in docs_output
+    assert "Import public authoring APIs from `sdk`" in docs_output
+    assert "capability-index.md" in docs_output
+    assert "geometry/knobs-and-controls.md" not in docs_output
 
 
 def test_read_file_tool_rejects_unknown_virtual_path(tmp_path: Path) -> None:

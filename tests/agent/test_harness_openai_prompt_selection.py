@@ -134,12 +134,11 @@ def test_openai_prompt_resolution_and_payload_preview() -> None:
 
     # SDK docs router bundle is injected
     assert "## docs/sdk/references/quickstart.md" in docs_message
-    assert "## docs/sdk/references/probe-tooling.md" in docs_message
-    assert "## docs/sdk/references/testing.md" in docs_message
-    assert "Virtual Workspace" in docs_message
-    assert "Import from `sdk` in `model.py`." in docs_message
-    assert "Use `place_on_surface(...)` by default" in docs_message
-    assert "Once `run_tests()` references a visual by exact `elem_*` name" in docs_message
+    assert "## docs/sdk/references/probe-tooling.md" not in docs_message
+    assert "## docs/sdk/references/testing.md" not in docs_message
+    assert "Workspace Contract" in docs_message
+    assert "Import public authoring APIs from `sdk`" in docs_message
+    assert "docs/sdk/references/capability-index.md" in docs_message
 
 
 def test_openai_payload_preview_includes_find_examples_tool() -> None:
@@ -379,9 +378,8 @@ def test_gemini_prompt_resolution_and_payload_preview() -> None:
     assert gemini_task_message.endswith("a pair of scissors")
 
     assert "## docs/sdk/references/quickstart.md" in gemini_docs_message
-    assert "## docs/sdk/references/probe-tooling.md" in gemini_docs_message
-    assert "Mounted Reference Layout" in gemini_docs_message
-    assert "Once `run_tests()` references a visual by exact `elem_*` name" in gemini_docs_message
+    assert "## docs/sdk/references/probe-tooling.md" not in gemini_docs_message
+    assert "docs/sdk/references/capability-index.md" in gemini_docs_message
 
 
 def test_gemini_payload_preview_includes_find_examples_tool() -> None:
@@ -452,7 +450,7 @@ def test_openrouter_prompt_resolution_and_payload_preview() -> None:
     assert "Read the current `model.py` before editing." in task_message
     assert task_message.endswith("a pair of scissors")
     assert "## docs/sdk/references/quickstart.md" in docs_message
-    assert "## docs/sdk/references/probe-tooling.md" in docs_message
+    assert "## docs/sdk/references/probe-tooling.md" not in docs_message
 
 
 def test_anthropic_prompt_resolution_and_payload_preview() -> None:
@@ -508,7 +506,7 @@ def test_anthropic_prompt_resolution_and_payload_preview() -> None:
     assert "Read the current `model.py` before editing." in task_message
     assert task_message.endswith("a pair of scissors")
     assert "## docs/sdk/references/quickstart.md" in docs_message
-    assert "## docs/sdk/references/probe-tooling.md" in docs_message
+    assert "## docs/sdk/references/probe-tooling.md" not in docs_message
 
 
 def test_gemini_multimodal_payload_preview_keeps_image_and_appends_guidance(

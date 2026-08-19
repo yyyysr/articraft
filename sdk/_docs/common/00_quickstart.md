@@ -1,311 +1,44 @@
 # SDK Quickstart
 
-## Purpose
+## Workspace Contract
 
-Use this page to start a new Articraft SDK script. It defines the required
-script contract, the authoring workspace rules, and one minimal end-to-end
-example.
-Detailed APIs live in the mounted `docs/sdk/references/...` files listed below.
-
-## Virtual Workspace
-
-You are editing a virtual authoring workspace.
+You are editing a virtual Articraft authoring workspace.
 
 - `model.py` is the only writable file.
-- `docs/sdk/references/quickstart.md` is this always-loaded entrypoint.
-- Everything under `docs/` is read-only SDK guidance.
-- Import from `sdk` in `model.py`.
-- Use `read_file(path=...)` to load exact reference text only when needed.
+- Everything under `docs/` is read-only guidance.
+- Import public authoring APIs from `sdk`; documentation paths are not Python
+  module paths.
+- Distances are meters and rotations are radians.
+- Do not write USD or URDF directly. The compiler owns validation,
+  materialization, collision compilation, and export.
 
-## Import Contract
-
-Authoring helpers are exposed as top-level public imports from `sdk`.
-The mounted docs are grouped by topic for reading convenience; those filenames
-do not imply matching Python submodules.
+Every generated script defines:
 
 ```python
-# Correct
-from sdk import ArticulatedObject, MotionLimits, MotionProperties, PhysicsMaterial, place_on_face
-
-# Wrong
-from sdk.placement import place_on_face
-from sdk.core_types import MotionLimits
-```
-
-## Mounted Reference Layout
-
-Always available in `docs/sdk/references/`:
-
-- `quickstart.md`: script contract, workspace rules, minimal example, workflow, and the
-  full reference inventory.
-- `errors.md`: common compile and authoring failures, plus how to interpret them.
-- `core-types.md`: geometry, material, articulation, and test-related core
-  types, plus optional inertial helpers.
-- `material-catalogs.md`: optional searchable visual-material catalogs,
-  per-visual binding, renderer fallbacks, and textured-material requirements.
-- `articulated-object.md`: object, part, and articulation authoring helpers and lookup
-  patterns.
-- `physics-parameters.md`: physical-material, mass-property, passive-joint-dynamics,
-  fallback, and parameter-selection guidance.
-- `assets.md`: explicit asset-root helpers for standalone scripts and tests.
-- `placement.md`: placement helpers for mounting, offsets, wrapping, and alignment.
-- `probe-tooling.md`: `probe_model` helper catalog and inspection workflow.
-- `testing.md`: `TestContext`, `expect_*` assertions, and test authoring patterns.
-- `cadquery/overview.md`: when and why to use CadQuery-style geometry in Articraft.
-- `cadquery/primer.md`: CadQuery mental model and core shape-building workflow.
-- `cadquery/workplane.md`: workplane-based modeling patterns and common operations.
-- `cadquery/sketch.md`: sketch-driven 2D profiles and profile construction tools.
-- `cadquery/assembly.md`: CadQuery assembly helpers and composition patterns.
-- `cadquery/gears.md`: vendored gear builders and the preserved `Workplane.gear()`
-  plugin workflow.
-- `cadquery/free-functions.md`: free-function geometry helpers and utility builders.
-- `cadquery/api-ref.md`: compact CadQuery API reference and signatures.
-
-Additional geometry references:
-
-- `geometry/mesh-geometry.md`: mesh generation flow, managed meshes, and mesh-based
-  low-level geometry helpers.
-- `geometry/panels-and-grilles.md`: perforated panels, slotted panels, and full vent
-  grilles.
-- `geometry/brackets-and-mounts.md`: clevises, forks, and yoke-style support members.
-- `geometry/fans-and-rotors.md`: axial fan rotors and blower wheels.
-- `geometry/knobs-and-controls.md`: knobs, dial caps, grip details, and shaft bores.
-- `geometry/wires.md`: wire and path construction helpers.
-- `geometry/section-lofts.md`: section lofts, repairs, and section-driven geometry.
-- `geometry/bezels-and-frames.md`: bezels, framed openings, recesses, and trim
-  surrounds.
-- `geometry/wheels-and-tires.md`: wheel structure, tire carcasses, tread, and sidewalls.
-- `geometry/hinges.md`: exposed barrel and piano hinge helpers.
-
-If a prompt clearly names a semantic part family such as a knob, bezel, wheel,
-tire, vent grille, bracket, or hinge, read that focused geometry page before
-falling back to the low-level mesh page.
-
-Read the exact document you need. Do not guess helper names or signatures from memory.
-
-When a named realistic surface finish would materially improve the object, call
-`find_materials` and use the exact returned catalog/id pair. Do not read the
-material USD and do not invent catalog names. Catalog use is optional: retain
-ordinary `rgba` or `texture` materials when they are adequate. Read
-`docs/sdk/references/material-catalogs.md` only when using this workflow.
-
-## Script Contract
-
-Every generated script should define:
-
-- `build_object_model() -> ArticulatedObject`
-- `run_tests() -> TestReport`
-- `object_model = build_object_model()`
-
-`compile_model` compiles `object_model`, derives exact collisions from visuals,
-runs tests, and exports the result. Do not emit URDF XML directly.
-
-`compile_model` also owns the baseline sanity/QC pass. It automatically checks
-model validity, exactly one root part, mesh assets, floating disconnected part
-groups, disconnected geometry islands inside a part, and current-pose real 3D
-overlaps.
-
-## Recommended Imports
-
-```python
-from sdk import (
-    ArticulatedObject,
-    ArticulationType,
-    Box,
-    MotionLimits,
-    MotionProperties,
-    Origin,
-    PhysicsMaterial,
-    TestContext,
-    TestReport,
-)
-```
-
-## Managed Mesh Pattern
-
-Use logical mesh names. Articraft manages the materialized OBJ asset paths.
-
-- Generate procedural meshes with `mesh_from_geometry(..., "part_name")`.
-- Import existing OBJ inputs with `mesh_from_input("mesh_name")`.
-- Use `TestContext(object_model)`; do not wire asset roots manually.
-- If you are writing a standalone local script and need a stable asset root,
-  read `docs/sdk/references/assets.md`.
-
-## Minimal Example
-
-```python
-from sdk import (
-    ArticulatedObject,
-    ArticulationType,
-    Box,
-    MotionLimits,
-    Origin,
-    TestContext,
-    TestReport,
-)
-
-
-def build_object_model() -> ArticulatedObject:
-    model = ArticulatedObject(name="example_box_lid")
-    painted_plastic = PhysicsMaterial(
-        name="painted_plastic",
-        density=1100.0,
-        static_friction=0.6,
-        dynamic_friction=0.45,
-        restitution=0.05,
-    )
-
-    base = model.part("base", physics_material=painted_plastic)
-    base.visual(
-        Box((0.20, 0.20, 0.05)),
-        origin=Origin(xyz=(0.0, 0.0, 0.025)),
-        name="base_shell",
-    )
-
-    lid = model.part("lid", physics_material=painted_plastic)
-    lid.visual(
-        Box((0.18, 0.18, 0.02)),
-        # The lid part frame sits on the hinge line; the panel extends along +X.
-        origin=Origin(xyz=(0.09, 0.0, 0.01)),
-        name="lid_shell",
-    )
-
-    model.articulation(
-        "base_to_lid",
-        ArticulationType.REVOLUTE,
-        parent=base,
-        child=lid,
-        # Positive q should open the lid upward, not into the base.
-        # Because the closed lid extends along local +X from the hinge,
-        # choose -Y so positive rotation lifts the free edge toward +Z.
-        origin=Origin(xyz=(-0.09, 0.0, 0.05)),
-        axis=(0.0, -1.0, 0.0),
-        motion_limits=MotionLimits(effort=5.0, velocity=3.0, lower=0.0, upper=1.2),
-        motion_properties=MotionProperties(damping=0.1, friction=0.02),
-    )
-
-    return model
-
-
-def run_tests() -> TestReport:
-    ctx = TestContext(object_model)
-    base = object_model.get_part("base")
-    lid = object_model.get_part("lid")
-    hinge = object_model.get_articulation("base_to_lid")
-
-    with ctx.pose({hinge: 0.0}):
-        ctx.expect_gap(lid, base, axis="z", max_gap=0.001, max_penetration=0.0)
-        ctx.expect_overlap(lid, base, axes="xy", min_overlap=0.05)
-
-    return ctx.report()
-
+def build_object_model() -> ArticulatedObject: ...
+def run_tests() -> TestReport: ...
 
 object_model = build_object_model()
 ```
 
-This example uses a hinge-line part frame for the lid. At `q=0`, the child
-frame coincides with the articulation frame at the left edge of the lid. Since
-the closed lid panel extends along local `+X` from that hinge, `axis=(0, -1, 0)`
-makes positive angles open upward.
+Use logical names with managed mesh helpers such as
+`mesh_from_geometry(..., "part_name")`, `mesh_from_cadquery(...)`, and
+`mesh_from_input(...)`. Read the referenced API page before using an unfamiliar
+helper or parameter; do not guess signatures from memory.
 
-## Recommended Workflow
+## Read Only What You Need
 
-1. Derive a compact internal Articraft brief from the prompt.
-2. Build parts with `model.part(...)`.
-3. Add visuals with `part.visual(...)`.
-4. Add motion with `model.articulation(...)`.
-5. Add prompt-specific `expect_*` assertions in `run_tests()`.
-6. Use `allow_overlap(...)` and `allow_isolated_part(...)` only when the
-   intended mechanism genuinely requires those exceptions.
-
-`part.inertial` is optional. Add it only when a downstream simulation or
-export consumer needs explicit mass properties.
-
-## Articraft Brief
-
-Before coding, translate the user's prose into a short internal Articraft brief.
-Do not ask the user to provide this structure. Use it to make the first
-implementation pass coherent and to choose tests that prove the requested object,
-not just that the model compiles.
-
-Use only the fields that matter for the prompt:
+After understanding the request and inspecting the existing `model.py`, read:
 
 ```text
-Articraft brief:
-- Object: real object identity and approximate real-world scale.
-- Root/support: fixed body or frame that carries the assembly.
-- Parts: major authored parts and why they are separate or fused.
-- Articulations: joint name, parent, child, type, frame/origin idea, axis,
-  positive motion, and limits.
-- Visible geometry: prompt-critical shapes, openings, cavities, controls,
-  materials, and colors.
-- Support/fit: how separate parts mount, contact, clear, nest, or retain.
-- Intentional overlaps: none, or exact local embeddings that need allowances.
-- Tests: prompt-specific checks and decisive pose checks.
-- Assumptions: meaningful inferred choices.
+docs/sdk/references/capability-index.md
 ```
 
-For simple static objects, the brief may only need object, root/support, visible
-geometry, tests, and assumptions. For mechanism-heavy objects, explicitly name
-each moving part and what positive motion should do before writing the joint.
+The index routes geometry, structure, appearance, collision, physics, and
+validation work to focused references. Load only the references needed for the
+current change. Do not preload mesh, CadQuery, physics, probe, or testing pages
+for possible future use.
 
-Example:
-
-```text
-Articraft brief:
-- Object: 13-inch laptop, about 0.30 x 0.21 m footprint.
-- Root/support: base chassis is root; screen is carried by rear hinge barrels.
-- Parts: base chassis, screen lid, keyboard keys or rows, trackpad.
-- Articulation: base_to_screen, REVOLUTE, rear hinge line, axis chosen so
-  positive q opens the screen upward/backward, limits 0 to about 2.1 rad.
-- Visible geometry: thin base shell, raised keys, dark display inset, hinge
-  cylinders, restrained metal/plastic materials.
-- Support/fit: hinge barrels contact the rear base edge and lower display edge.
-- Intentional overlaps: small hinge-pin/barrel embedding only if simplified.
-- Tests: screen exists, hinge positive pose raises display, closed pose seats
-  near base, hinge support remains connected.
-- Assumptions: generic laptop proportions, no port-level detail.
-```
-
-## Authoring Habits
-
-- Model visible openings, cavities, and hollow bodies explicitly. Do not cap a
-  visible opening with a solid placeholder.
-- If the object is layered or nested, model those layers with clear visual
-  separation instead of collapsing them into one solid mass.
-- Preserve the visible construction logic of major faces and covers. If a
-  visible surface should read as one continuous piece, keep it connected and
-  cut openings into it rather than replacing it with floating fragments.
-- Hidden supports and internal structure can stay simple as long as the visible
-  form reads correctly.
-- Within one part, avoid disconnected visual islands. If a feature should read
-  as mounted, give it a real rib, bracket, pin, collar, stem, or wall
-  connection, or split it into a separate part.
-- For mounted child parts, prefer placement helpers over hand-tuned
-  `Origin(...)` offsets.
-- Use `place_on_surface(...)` by default for rigid mounts onto housings,
-  shells, panels, pedals, feet, knobs, buttons, pads, brackets, and similar
-  surface-mounted parts.
-- Use `place_on_face(...)` or `place_on_face_uv(...)` only when the parent is
-  truly box-like and the semantic reference is a specific face.
-- Use `proud_for_flush_mount(...)` when a centered child should sit flush
-  instead of half-embedded.
-- Use restrained real-world materials and colors rather than placeholder
-  defaults.
-
-## Reference Routing
-
-- If you need type or helper signatures, read `docs/sdk/references/core-types.md`.
-- If you need part/object construction patterns, read
-  `docs/sdk/references/articulated-object.md`.
-- If you need explicit asset-root control, read `docs/sdk/references/assets.md`.
-- If you need placement logic, read `docs/sdk/references/placement.md`.
-- If you need compile/debug interpretation, read `docs/sdk/references/errors.md`.
-- If you need probe helper details, read `docs/sdk/references/probe-tooling.md`.
-- If you need testing details, read `docs/sdk/references/testing.md`.
-- If you need lower-level CadQuery geometry, read the relevant
-  `docs/sdk/references/cadquery/*.md` document.
-- If you need semantic geometry families, read the relevant
-  `docs/sdk/references/geometry/*.md` family page first.
-- If you need low-level mesh, wire, or loft helpers, read the relevant
-  `docs/sdk/references/geometry/*.md` document.
+When authoring fails, read `docs/sdk/references/errors.md`. Use
+`docs/sdk/references/probe-tooling.md` only when inspecting model state, and
+`docs/sdk/references/testing.md` only when adding or correcting assertions.

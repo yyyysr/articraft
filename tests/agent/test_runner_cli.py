@@ -59,7 +59,8 @@ def test_runner_dump_provider_payload_supports_sdk(
     payload = json.loads(capsys.readouterr().out)
     docs_message = payload["input"][0]["content"][0]["text"]
     assert "## docs/sdk/references/quickstart.md" in docs_message
-    assert "Import from `sdk` in `model.py`." in docs_message
+    assert "Import public authoring APIs from `sdk`" in docs_message
+    assert "docs/sdk/references/capability-index.md" in docs_message
 
 
 def test_runner_accepts_openai_api_keys_env(
