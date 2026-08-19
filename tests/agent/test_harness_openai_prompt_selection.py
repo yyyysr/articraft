@@ -72,10 +72,11 @@ def test_openai_prompt_resolution_and_payload_preview() -> None:
 
     # Tool contract
     assert (
-        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, and `find_materials`."
         in instructions
     )
-    assert "FREEFORM tool" in instructions
+    assert "JSON `input` string" in instructions
+    assert "FREEFORM tool" not in instructions
     assert "write_code" not in instructions
     assert "Prefer several small `apply_patch` edits over one giant patch" in instructions
 
@@ -104,7 +105,7 @@ def test_openai_prompt_resolution_and_payload_preview() -> None:
 
     # Provider/system guidance
     assert "read-only Python inspection" in instructions
-    assert "searches curated SDK examples for patterns" in instructions
+    assert "find_examples" not in instructions
     assert "<compile_signals>" in instructions
     assert "Match the visible construction logic of the object." in instructions
     assert (
@@ -139,29 +140,35 @@ def test_openai_prompt_resolution_and_payload_preview() -> None:
     assert "Workspace Contract" in docs_message
     assert "Import public authoring APIs from `sdk`" in docs_message
     assert "docs/sdk/references/capability-index.md" in docs_message
+    assert "documentation working set" in instructions
+    assert "strongly coupled capabilities together" in instructions
+    assert "alternative implementation paths" in instructions
 
 
-def test_openai_payload_preview_includes_find_examples_tool() -> None:
+def test_openai_payload_preview_excludes_find_examples_tool() -> None:
     payload = _build_openai_preview(sdk_package="sdk")
 
     tool_names = {tool["name"] for tool in payload["tools"]}
     assert "compile_model" in tool_names
     assert "probe_model" in tool_names
-    assert "find_examples" in tool_names
+    assert "find_examples" not in tool_names
     strict_by_name = {
         tool["name"]: tool.get("strict")
         for tool in payload["tools"]
         if tool.get("type") == "function"
     }
     assert strict_by_name["read_file"] is False
+    assert strict_by_name["apply_patch"] is True
     assert strict_by_name["compile_model"] is True
     assert strict_by_name["probe_model"] is True
-    assert strict_by_name["find_examples"] is True
+    apply_patch_schema = next(tool for tool in payload["tools"] if tool["name"] == "apply_patch")
+    assert set(apply_patch_schema["parameters"]["properties"]) == {"input"}
+    assert apply_patch_schema["parameters"]["required"] == ["input"]
     assert (
-        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, and `find_materials`."
         in payload["instructions"]
     )
-    assert "searches curated SDK examples for patterns" in payload["instructions"]
+    assert "find_examples" not in payload["instructions"]
 
 
 def test_openai_multimodal_payload_preview_keeps_image_and_appends_guidance(
@@ -322,7 +329,7 @@ def test_gemini_prompt_resolution_and_payload_preview() -> None:
 
     # Tool contract
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_materials`."
         in gemini_instructions
     )
     assert "write_code" not in gemini_instructions
@@ -355,7 +362,7 @@ def test_gemini_prompt_resolution_and_payload_preview() -> None:
 
     # Provider/system guidance
     assert "read-only Python inspection" in gemini_instructions
-    assert "searches curated SDK examples for patterns" in gemini_instructions
+    assert "find_examples" not in gemini_instructions
     assert "Match the visible construction logic of the object." in gemini_instructions
     assert (
         "Preserve correct joint origins, axes, limits, and articulation behavior."
@@ -382,7 +389,7 @@ def test_gemini_prompt_resolution_and_payload_preview() -> None:
     assert "docs/sdk/references/capability-index.md" in gemini_docs_message
 
 
-def test_gemini_payload_preview_includes_find_examples_tool() -> None:
+def test_gemini_payload_preview_excludes_find_examples_tool() -> None:
     payload = build_provider_payload_preview(
         "a pair of scissors",
         provider="gemini",
@@ -396,12 +403,12 @@ def test_gemini_payload_preview_includes_find_examples_tool() -> None:
     tool_names = {tool["name"] for tool in declarations}
     assert "compile_model" in tool_names
     assert "probe_model" in tool_names
-    assert "find_examples" in tool_names
+    assert "find_examples" not in tool_names
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_materials`."
         in payload["config"]["system_instruction"]
     )
-    assert "searches curated SDK examples for patterns" in payload["config"]["system_instruction"]
+    assert "find_examples" not in payload["config"]["system_instruction"]
 
 
 def test_openrouter_prompt_resolution_and_payload_preview() -> None:
@@ -429,14 +436,13 @@ def test_openrouter_prompt_resolution_and_payload_preview() -> None:
     assert "<process>" in instructions
     assert "<modeling>" in instructions
     assert "Work evidence-first. Before editing, read `model.py`" in instructions
-    assert "use `find_examples` for one or two relevant construction patterns" in instructions
     assert "Treat overlap failures by classifying them first." in instructions
     assert (
         "silence it with a scoped `ctx.allow_overlap(...)` plus an exact proof check"
         in instructions
     )
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_materials`."
         in instructions
     )
     assert "FREEFORM tool" not in instructions
@@ -485,14 +491,13 @@ def test_anthropic_prompt_resolution_and_payload_preview() -> None:
     assert "Work evidence-first. Before editing, read `model.py`" in instructions
     assert "## docs/sdk/references/quickstart.md" in docs_message
     assert "a pair of scissors" in task_message
-    assert "use `find_examples` for one or two relevant construction patterns" in instructions
     assert "Treat overlap failures by classifying them first." in instructions
     assert (
         "silence it with a scoped `ctx.allow_overlap(...)` plus an exact proof check"
         in instructions
     )
     assert (
-        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_materials`."
         in instructions
     )
     assert "FREEFORM tool" not in instructions

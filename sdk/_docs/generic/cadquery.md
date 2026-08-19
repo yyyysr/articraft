@@ -7,6 +7,10 @@ procedural meshes are a poor fit: shells, fillets, chamfers, holes, grooves,
 repeated cuts, and solid booleans. Keep parts, joints, materials, physics, tests,
 and final export in the Articraft SDK.
 
+CadQuery is an alternative primary geometry path to procedural mesh or section
+lofting for many parts. Read this page after choosing feature-based solid
+modeling; do not preload every alternative's detailed reference.
+
 CadQuery is unitless. Articraft output must be meters. Author directly in meters
 with `unit_scale=1.0`, or author in another consistent unit and convert exactly
 once during export.
@@ -93,3 +97,7 @@ For full CadQuery call signatures, read
 - Check wall thickness and opening topology after shell or boolean operations.
 - Tessellation tolerance controls the exported mesh, not the underlying CAD
   solid. Tighten it only where visible curvature requires it.
+
+Stop reading when the current solid operations and managed export path are
+clear. Read `docs/sdk/references/cadquery/api-ref.md` only when a specific
+CadQuery signature remains unresolved.

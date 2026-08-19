@@ -6,6 +6,11 @@ Use this page when mass distribution, contact behavior, or passive joint
 behavior matters to simulation. Author physics in `model.py`; there is no
 separate physics-plan file.
 
+Physics is commonly coupled with articulation and collision, but it does not
+need to precede a structural pass that does not assign physical values. Include
+this page in the working set when the current edit authors or reviews mass,
+contact parameters, joint resistance, or gravity-sensitive behavior.
+
 - The author selects plausible part masses, material classes, and meaningful
   joint behavior from object semantics.
 - The SDK validates values, derives unresolved mass properties, and exports the
@@ -145,3 +150,8 @@ Stiffness/equilibrium are portable in standard OpenUSD `PhysicsDriveAPI` but
 have no core URDF equivalent. `MotionLimits.effort` becomes USD drive
 `maxForce` and URDF joint limit `effort`; it is not a friction model. Do not add
 PhysX-specific schema fields to portable authoring.
+
+Stop reading when the affected parts have a defensible mass/contact source and
+the affected joints have an explicit passive-behavior decision. Return to
+geometry or articulation references only when those decisions expose a concrete
+modeling inconsistency.

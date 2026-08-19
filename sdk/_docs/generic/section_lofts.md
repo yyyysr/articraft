@@ -7,6 +7,10 @@ ordered set of cross-sections, optionally following a path. Use a primitive for
 an exact primitive shape and CadQuery when the result needs downstream solid
 features such as shells, fillets, or cuts.
 
+Section lofting is a selected geometry path, not a prerequisite for all curved
+models. Read this page with the part/articulation reference only when section
+placement and moving-part frames are coupled in the current edit.
+
 ## Entry Point
 
 ```python
@@ -76,3 +80,7 @@ sections, it rebuilds with the selected repair mode.
 - Use repair for broken topology, not as a substitute for coherent sections.
 - Inspect closedness and caps when the result is intended to have mass or
   collision as a solid.
+
+Stop reading when section correspondence, path use, tessellation, and repair
+choices are sufficient for the current loft. Use diagnostic tooling after a
+concrete topology failure rather than preloading unrelated geometry paths.

@@ -59,18 +59,26 @@ class SdkProfile:
         return None
 
 
-_COMMON_DOCS = (
+_AGENT_ENTRY_DOCS = (
     Path("sdk/_docs/common/00_quickstart.md"),
     Path("sdk/_docs/common/05_capability_index.md"),
+    Path("sdk/_docs/generic/modeling_strategy.md"),
+)
+
+_AGENT_REFERENCE_DOCS = (
+    Path("sdk/_docs/generic/core_types.md"),
+    Path("sdk/_docs/generic/articulated_object.md"),
+    Path("sdk/_docs/generic/mesh_geometry.md"),
+    Path("sdk/_docs/generic/section_lofts.md"),
+    Path("sdk/_docs/generic/cadquery.md"),
+    Path("sdk/_docs/generic/physics_parameters.md"),
+    Path("sdk/_docs/generic/testing.md"),
     Path("sdk/_docs/common/10_errors.md"),
-    Path("sdk/_docs/common/20_core_types.md"),
     Path("sdk/_docs/common/25_material_catalogs.md"),
-    Path("sdk/_docs/common/30_articulated_object.md"),
-    Path("sdk/_docs/common/35_physics_parameters.md"),
     Path("sdk/_docs/common/40_assets.md"),
     Path("sdk/_docs/common/50_placement.md"),
     Path("sdk/_docs/common/70_probe_tooling.md"),
-    Path("sdk/_docs/common/80_testing.md"),
+    Path("sdk/_docs/cadquery/39c_cadquery_api_ref.md"),
 )
 
 _SDK_PACKAGE_ALIASES = {
@@ -85,16 +93,10 @@ SDK_PROFILES: dict[str, SdkProfile] = {
         package_name="sdk",
         scaffold_path=Path("scaffold.py"),
         docs_full=(
-            *_COMMON_DOCS,
-            Path("sdk/_docs/base/40_mesh_geometry.md"),
-            Path("sdk/_docs/base/46_section_lofts.md"),
-            Path("sdk/_docs/cadquery/35_cadquery.md"),
-            Path("sdk/_docs/cadquery/39c_cadquery_api_ref.md"),
+            *_AGENT_ENTRY_DOCS,
+            *_AGENT_REFERENCE_DOCS,
         ),
-        docs_core=(
-            Path("sdk/_docs/common/00_quickstart.md"),
-            Path("sdk/_docs/common/05_capability_index.md"),
-        ),
+        docs_core=_AGENT_ENTRY_DOCS,
         openai_prompt_name=OPENAI_DESIGNER_PROMPT_NAME,
         codex_cli_prompt_name=CODEX_CLI_DESIGNER_PROMPT_NAME,
         gemini_prompt_name=GEMINI_DESIGNER_PROMPT_NAME,

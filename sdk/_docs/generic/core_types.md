@@ -5,6 +5,12 @@
 This page documents the generic data types shared by geometry, appearance,
 physics, and articulation authoring. Import public APIs from `sdk`.
 
+Use this reference with `docs/sdk/references/articulated-object.md` when
+rigid-part frames and geometry are being designed together. For a non-primitive
+primary shape, choose the CadQuery, procedural mesh, or section-loft path in
+`docs/sdk/references/modeling-strategy.md` rather than preloading every geometry
+reference.
+
 ## Units And Transforms
 
 - Distances are meters.
@@ -188,3 +194,7 @@ scale_geometry_to_size(
 Resizing keeps a primitive only when the result is still representable by that
 primitive. Nonuniformly scaling a sphere or scaling a cylinder differently in
 its two radial axes requires a mesh output and therefore `filename`.
+
+Stop reading when the descriptors and signatures required by the current edit
+are resolved. Material catalogs, physical estimates, and test assertions belong
+to their own working sets unless they affect this same edit.

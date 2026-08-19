@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_OPENAI_MODEL = DEFAULT_GENERATION_MODEL
+DEFAULT_OPENAI_MAX_ATTEMPTS = 10
 _GPT_5_4_AND_5_5_DANGER_ZONE_TOKENS = 272_000
 _GPT_5_2_AND_5_3_CODEX_DANGER_ZONE_TOKENS = 280_000
 DEFAULT_OPENAI_COMPACTION_MODEL = "gpt-5.4-mini"
@@ -94,7 +95,10 @@ class OpenAILLM:
         self.store = self.transport == "websocket" if store is None else bool(store)
         # Hard timeout for a single OpenAI request. Set to 0/negative to disable.
         self.request_timeout_seconds = _env_float("OPENAI_REQUEST_TIMEOUT_SECONDS", 900.0)
-        self.max_attempts = max(1, int(_env_float("OPENAI_MAX_ATTEMPTS", 4)))
+        self.max_attempts = max(
+            1,
+            int(_env_float("OPENAI_MAX_ATTEMPTS", DEFAULT_OPENAI_MAX_ATTEMPTS)),
+        )
         self.retry_base_seconds = _env_float("OPENAI_RETRY_BASE_SECONDS", 0.5)
         self.retry_max_seconds = _env_float("OPENAI_RETRY_MAX_SECONDS", 20.0)
         self.websocket_open_timeout_seconds = _env_float(

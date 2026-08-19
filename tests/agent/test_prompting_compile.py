@@ -24,7 +24,6 @@ CORE_CONCEPTS = (
     "Do not remove, cap, fuse, or simplify prompt-critical visible geometry",
     "Prefer CadQuery for visible geometry",
     "probe_model",
-    "find_examples",
     "find_materials",
     "Never answer with code directly in the assistant response.",
 )
@@ -79,12 +78,12 @@ def test_prompt_outputs_are_current() -> None:
             "apply_patch",
             "compile_model",
             "probe_model",
-            "find_examples",
             "find_materials",
         },
         absent={"write_code", "replace", "write_file"},
     )
-    assert "FREEFORM tool" in openai_text
+    assert "JSON `input` string" in openai_text
+    assert "FREEFORM tool" not in openai_text
 
     codex_cli_text = compiled_by_name["designer_system_prompt_codex_cli.txt"]
     _assert_shared_contract(codex_cli_text)
@@ -97,7 +96,6 @@ def test_prompt_outputs_are_current() -> None:
             "write_file",
             "compile_model",
             "probe_model",
-            "find_examples",
             "find_materials",
         },
         absent={"write_code"},
@@ -120,7 +118,6 @@ def test_prompt_outputs_are_current() -> None:
             "write_file",
             "compile_model",
             "probe_model",
-            "find_examples",
             "find_materials",
         },
         absent={"write_code", "apply_patch"},
@@ -137,7 +134,6 @@ def test_prompt_outputs_are_current() -> None:
             "write_file",
             "compile_model",
             "probe_model",
-            "find_examples",
             "find_materials",
         },
         absent={"write_code", "apply_patch"},
@@ -154,7 +150,6 @@ def test_prompt_outputs_are_current() -> None:
             "write_file",
             "compile_model",
             "probe_model",
-            "find_examples",
             "find_materials",
         },
         absent={"write_code", "apply_patch"},

@@ -86,7 +86,7 @@ def build_tool_registry(
     if provider_norm is ProviderName.OPENAI:
         tools: list[BaseDeclarativeTool] = [
             ReadFileTool(),
-            ApplyPatchFreeformTool(),
+            ApplyPatchJsonTool(),
             CompileModelTool(),
             ProbeModelTool(sdk_package=package, runtime_limits=runtime_limits),
         ]
@@ -107,9 +107,6 @@ def build_tool_registry(
             CompileModelTool(),
             ProbeModelTool(sdk_package=package, runtime_limits=runtime_limits),
         ]
-    tools.append(
-        FindExamplesTool(sdk_package=package, include_paths=provider_norm is ProviderName.OPENAI)
-    )
     tools.append(FindMaterialsTool())
     return ToolRegistry(tools)
 

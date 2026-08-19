@@ -50,7 +50,7 @@ def test_codex_cli_prompt_resolution_and_payload_preview() -> None:
     assert payload["transport"] == "codex-cli"
     assert "Codex CLI behind Articraft's internal harness" in payload["prompt"]
     assert (
-        "Available tools: `read_file`, `apply_patch`, `replace`, `write_file`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
+        "Available tools: `read_file`, `apply_patch`, `replace`, `write_file`, `compile_model`, `probe_model`, and `find_materials`."
         in payload["prompt"]
     )
 

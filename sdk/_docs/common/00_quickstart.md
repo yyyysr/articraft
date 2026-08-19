@@ -21,12 +21,7 @@ def run_tests() -> TestReport: ...
 object_model = build_object_model()
 ```
 
-Use logical names with managed mesh helpers such as
-`mesh_from_geometry(..., "part_name")`, `mesh_from_cadquery(...)`, and
-`mesh_from_input(...)`. Read the referenced API page before using an unfamiliar
-helper or parameter; do not guess signatures from memory.
-
-## Read Only What You Need
+## Build A Working Set
 
 After understanding the request and inspecting the existing `model.py`, read:
 
@@ -34,11 +29,11 @@ After understanding the request and inspecting the existing `model.py`, read:
 docs/sdk/references/capability-index.md
 ```
 
-The index routes geometry, structure, appearance, collision, physics, and
-validation work to focused references. Load only the references needed for the
-current change. Do not preload mesh, CadQuery, physics, probe, or testing pages
-for possible future use.
+Use the index to assemble the documentation working set for the next coherent
+code change. A working set may include several strongly coupled capabilities;
+geometry, articulation, and collision often need to be planned together.
 
-When authoring fails, read `docs/sdk/references/errors.md`. Use
-`docs/sdk/references/probe-tooling.md` only when inspecting model state, and
-`docs/sdk/references/testing.md` only when adding or correcting assertions.
+Compare alternative approaches at the overview level, then read detailed API
+references only for the approach you intend to implement. Do not load a page
+only because it may become useful later. Once the working set resolves the
+decisions needed for the next change, stop reading and edit `model.py`.

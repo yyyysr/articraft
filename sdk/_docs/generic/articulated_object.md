@@ -5,6 +5,12 @@
 `ArticulatedObject` owns parts, visuals, materials, and articulations. This page
 documents the generic assembly contract without prescribing a product topology.
 
+Part structure, joint frames, geometry, and collision are often coupled. Read
+the selected geometry reference with this page when the moving shape must be
+designed around its articulation. Add
+`docs/sdk/references/physics-parameters.md` to the same working set only when
+the current edit also authors passive behavior or mass.
+
 ## Construction
 
 ```python
@@ -134,3 +140,7 @@ arbitrary fixed joints or disconnected support geometry.
 
 Read `docs/sdk/references/testing.md` for pose-aware structural and clearance
 assertions.
+
+Stop reading when the affected rigid-part boundaries, parent-child relations,
+joint frames, axes, and limits are clear enough to implement the current
+mechanism pass.

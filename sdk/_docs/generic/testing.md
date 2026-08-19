@@ -6,6 +6,10 @@ Use `TestContext` to verify object-specific structure, placement, motion, and
 clearance. Tests should prove the authored intent rather than merely restate
 that compilation succeeded.
 
+This is a validation and diagnostic reference. Read it while writing or fixing
+tests, or when a geometry/collision question requires an exact assertion. It
+does not need to block an earlier coherent modeling pass.
+
 ```python
 ctx = TestContext(object_model)
 return ctx.report()
@@ -119,3 +123,7 @@ modeled as connected or articulated geometry instead.
 - Keep tests independent of incidental triangulation and materialized filenames.
 - Use probe tooling to inspect uncertain state before adding a permissive
   allowance.
+
+Stop reading when the next assertions and decisive poses are identified. If the
+spatial state is still ambiguous, gather evidence with probe tooling instead of
+loading more modeling references speculatively.

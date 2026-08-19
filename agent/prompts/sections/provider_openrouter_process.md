@@ -1,8 +1,8 @@
 <process>
-- Work evidence-first. Before editing, read `model.py`, read the specific SDK docs needed for the object/mechanism, and use `find_examples` for one or two relevant construction patterns.
+- Work evidence-first. Before editing, read `model.py` and the task-scoped SDK documentation working set.
 - Do not keep planning in assistant text. Once you know the next concrete step, use a tool.
 - Build from grounded evidence:
-  1. Inspect the current code and relevant docs/examples.
+  1. Inspect the current code and relevant docs.
   2. Identify the root body, articulated parts, joint origins, joint axes, motion limits, visible realism features, and exact tests.
   3. Make one coherent implementation pass that creates a connected, mechanically credible baseline.
   4. Run `compile_model`.

@@ -20,7 +20,6 @@ def test_provider_tool_registry_schemas() -> None:
         "apply_patch",
         "compile_model",
         "probe_model",
-        "find_examples",
         "find_materials",
     }
     assert set(gemini_registry.get_all_tool_names()) == {
@@ -29,7 +28,6 @@ def test_provider_tool_registry_schemas() -> None:
         "write_file",
         "compile_model",
         "probe_model",
-        "find_examples",
         "find_materials",
     }
     assert set(codex_cli_registry.get_all_tool_names()) == {
@@ -39,11 +37,12 @@ def test_provider_tool_registry_schemas() -> None:
         "write_file",
         "compile_model",
         "probe_model",
-        "find_examples",
         "find_materials",
     }
     openai_schemas = openai_registry.get_tool_schemas()
-    apply_patch_schema = next(s for s in openai_schemas if s.get("name") == "apply_patch")
+    apply_patch_schema = next(
+        s for s in openai_schemas if s.get("function", {}).get("name") == "apply_patch"
+    )
     read_file_schema = next(
         s for s in openai_schemas if s.get("function", {}).get("name") == "read_file"
     )
@@ -52,9 +51,6 @@ def test_provider_tool_registry_schemas() -> None:
     )
     probe_model_schema = next(
         s for s in openai_schemas if s.get("function", {}).get("name") == "probe_model"
-    )
-    find_examples_schema = next(
-        s for s in openai_schemas if s.get("function", {}).get("name") == "find_examples"
     )
     find_materials_schema = next(
         s for s in openai_schemas if s.get("function", {}).get("name") == "find_materials"
@@ -76,15 +72,17 @@ def test_provider_tool_registry_schemas() -> None:
     write_file_schema = next(
         s for s in gemini_schemas if s.get("function", {}).get("name") == "write_file"
     )
-    assert apply_patch_schema.get("type") == "custom"
+    assert apply_patch_schema.get("type") == "function"
+    assert set(apply_patch_schema["function"]["parameters"]["properties"].keys()) == {"input"}
+    assert apply_patch_schema["function"]["parameters"]["required"] == ["input"]
     codex_apply_patch_schema = next(
         s for s in codex_cli_schemas if s.get("function", {}).get("name") == "apply_patch"
     )
     assert codex_apply_patch_schema.get("type") == "function"
     assert set(codex_apply_patch_schema["function"]["parameters"]["properties"].keys()) == {"input"}
     assert codex_apply_patch_schema["function"]["parameters"]["required"] == ["input"]
-    apply_patch_description = apply_patch_schema["description"]
-    assert "current bound file" in apply_patch_description
+    apply_patch_description = apply_patch_schema["function"]["description"]
+    assert "current bound `model.py`" in apply_patch_description
     assert "Single-file mode only" in apply_patch_description
     assert "`*** Add File`, `*** Delete File`, or `*** Move to`" in apply_patch_description
     read_file_props = read_file_schema["function"]["parameters"]["properties"]
@@ -120,19 +118,10 @@ def test_provider_tool_registry_schemas() -> None:
     assert "non-mutating inspection" in probe_description
     assert "exact probe helper catalog and signatures" in probe_description
     assert "current bound `model.py`" in probe_description.lower()
-    assert set(find_examples_schema["function"]["parameters"]["properties"].keys()) == {
-        "query",
-        "limit",
-    }
-    assert "lexical search" in find_examples_schema["function"]["description"].lower()
-    assert "does not search sdk docs" in find_examples_schema["function"]["description"].lower()
-    assert (
-        "not a general api search tool" in find_examples_schema["function"]["description"].lower()
-    )
-    assert "weakly relevant" in find_examples_schema["function"]["description"].lower()
-    assert "available example titles" not in find_examples_schema["function"]["description"].lower()
-    assert "short lexical query" in (
-        find_examples_schema["function"]["parameters"]["properties"]["query"]["description"].lower()
+    assert all(
+        schema.get("name") != "find_examples"
+        and schema.get("function", {}).get("name") != "find_examples"
+        for schema in openai_schemas
     )
 
 

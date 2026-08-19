@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
 
 from agent.tools.read_file import ReadFileTool
@@ -29,6 +30,7 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
     assert "Aluminum Brushed" not in preloaded
     assert "materials_libs_v2" not in preloaded
     assert "docs/sdk/references/assets.md" in bundle.files_by_path
+    assert "docs/sdk/references/modeling-strategy.md" in bundle.files_by_path
     assert "docs/sdk/references/physics-parameters.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/mesh-geometry.md" in bundle.files_by_path
     assert "docs/sdk/references/cadquery/overview.md" in bundle.files_by_path
@@ -44,6 +46,41 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
         "generic"
     )
     assert bundle.resolve("docs/sdk/references/testing.md").disk_path.parent.name == "generic"
+    assert bundle.resolve("docs/sdk/references/modeling-strategy.md").disk_path.name == (
+        "modeling_strategy.md"
+    )
+
+
+def test_mounted_sdk_document_links_resolve() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    bundle = load_sdk_docs_bundle(repo_root, sdk_package="sdk")
+    link_pattern = re.compile(r"docs/sdk/(?:references|guides)/[A-Za-z0-9_./-]+\.md")
+
+    for source in bundle.files_by_path.values():
+        for virtual_path in link_pattern.findall(source.read_text()):
+            assert virtual_path in bundle.files_by_path, (
+                f"{source.virtual_path} links to unmounted {virtual_path}"
+            )
+
+
+def test_sdk_entrypoint_and_strategy_preserve_working_set_contract() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    bundle = load_sdk_docs_bundle(repo_root, sdk_package="sdk")
+    link_pattern = re.compile(r"docs/sdk/(?:references|guides)/[A-Za-z0-9_./-]+\.md")
+
+    quickstart = bundle.read_text("docs/sdk/references/quickstart.md")
+    assert set(link_pattern.findall(quickstart)) == {"docs/sdk/references/capability-index.md"}
+
+    capability_index = bundle.read_text("docs/sdk/references/capability-index.md")
+    for relationship in ("Coupled", "Alternative", "Detail", "Diagnostic"):
+        assert relationship in capability_index
+    assert "docs/sdk/references/modeling-strategy.md" in capability_index
+    assert "## Stop Condition" in capability_index
+
+    strategy = bundle.read_text("docs/sdk/references/modeling-strategy.md")
+    assert "## Co-design Parts And Motion" in strategy
+    assert "## Choose A Primary Geometry Representation" in strategy
+    assert "## Stop Reading And Edit" in strategy
 
 
 def test_virtual_workspace_resolves_model_and_docs_paths(tmp_path: Path) -> None:

@@ -10,6 +10,7 @@ import pytest
 
 from agent.providers.openai import (
     DEFAULT_OPENAI_COMPACTION_MODEL,
+    DEFAULT_OPENAI_MAX_ATTEMPTS,
     DEFAULT_OPENAI_MODEL,
     OpenAILLM,
     _OpenAIWebSocketError,
@@ -351,6 +352,15 @@ def test_openai_default_request_timeout_is_15_minutes(
     provider = OpenAILLM(dry_run=True)
 
     assert provider.request_timeout_seconds == 900.0
+
+
+def test_openai_default_max_attempts_is_ten(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_MAX_ATTEMPTS", raising=False)
+
+    provider = OpenAILLM(dry_run=True)
+
+    assert DEFAULT_OPENAI_MAX_ATTEMPTS == 10
+    assert provider.max_attempts == 10
 
 
 def test_openai_default_model_is_latest_snapshot() -> None:

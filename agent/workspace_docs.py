@@ -10,16 +10,6 @@ _SDK_ROUTER_VIRTUAL_PATH = "docs/sdk/references/quickstart.md"
 _MODEL_VIRTUAL_PATH = "model.py"
 _DEFAULT_PRELOAD_PATHS = ("docs/sdk/references/quickstart.md",)
 
-_GENERIC_REFERENCE_OVERRIDES = {
-    "sdk/_docs/common/20_core_types.md": Path("sdk/_docs/generic/core_types.md"),
-    "sdk/_docs/common/30_articulated_object.md": Path("sdk/_docs/generic/articulated_object.md"),
-    "sdk/_docs/common/35_physics_parameters.md": Path("sdk/_docs/generic/physics_parameters.md"),
-    "sdk/_docs/common/80_testing.md": Path("sdk/_docs/generic/testing.md"),
-    "sdk/_docs/base/40_mesh_geometry.md": Path("sdk/_docs/generic/mesh_geometry.md"),
-    "sdk/_docs/base/46_section_lofts.md": Path("sdk/_docs/generic/section_lofts.md"),
-    "sdk/_docs/cadquery/35_cadquery.md": Path("sdk/_docs/generic/cadquery.md"),
-}
-
 
 @dataclass(frozen=True)
 class VirtualWorkspaceFile:
@@ -160,7 +150,7 @@ def _build_sdk_reference_files(
             continue
         files[f"docs/sdk/{virtual_suffix}"] = VirtualWorkspaceFile(
             virtual_path=f"docs/sdk/{virtual_suffix}",
-            disk_path=repo_root / _GENERIC_REFERENCE_OVERRIDES.get(rel_str, rel_path),
+            disk_path=repo_root / rel_path,
         )
     return files
 
@@ -177,31 +167,18 @@ def _resolve_sdk_docs_relative_path(path: str) -> str:
 _DOC_PATH_ALIASES = {
     "sdk/_docs/common/00_quickstart.md": "references/quickstart.md",
     "sdk/_docs/common/05_capability_index.md": "references/capability-index.md",
+    "sdk/_docs/generic/modeling_strategy.md": "references/modeling-strategy.md",
+    "sdk/_docs/generic/core_types.md": "references/core-types.md",
+    "sdk/_docs/generic/articulated_object.md": "references/articulated-object.md",
+    "sdk/_docs/generic/physics_parameters.md": "references/physics-parameters.md",
+    "sdk/_docs/generic/testing.md": "references/testing.md",
+    "sdk/_docs/generic/mesh_geometry.md": "references/geometry/mesh-geometry.md",
+    "sdk/_docs/generic/section_lofts.md": "references/geometry/section-lofts.md",
+    "sdk/_docs/generic/cadquery.md": "references/cadquery/overview.md",
     "sdk/_docs/common/10_errors.md": "references/errors.md",
-    "sdk/_docs/common/20_core_types.md": "references/core-types.md",
     "sdk/_docs/common/25_material_catalogs.md": "references/material-catalogs.md",
-    "sdk/_docs/common/30_articulated_object.md": "references/articulated-object.md",
-    "sdk/_docs/common/35_physics_parameters.md": "references/physics-parameters.md",
     "sdk/_docs/common/40_assets.md": "references/assets.md",
     "sdk/_docs/common/50_placement.md": "references/placement.md",
     "sdk/_docs/common/70_probe_tooling.md": "references/probe-tooling.md",
-    "sdk/_docs/common/80_testing.md": "references/testing.md",
-    "sdk/_docs/base/40_mesh_geometry.md": "references/geometry/mesh-geometry.md",
-    "sdk/_docs/base/41_panels_and_grilles.md": "references/geometry/panels-and-grilles.md",
-    "sdk/_docs/base/42_brackets_and_mounts.md": "references/geometry/brackets-and-mounts.md",
-    "sdk/_docs/base/43_fans_and_rotors.md": "references/geometry/fans-and-rotors.md",
-    "sdk/_docs/base/44_knobs_and_controls.md": "references/geometry/knobs-and-controls.md",
-    "sdk/_docs/base/45_wires.md": "references/geometry/wires.md",
-    "sdk/_docs/base/46_section_lofts.md": "references/geometry/section-lofts.md",
-    "sdk/_docs/base/47_bezels_and_frames.md": "references/geometry/bezels-and-frames.md",
-    "sdk/_docs/base/48_wheels_and_tires.md": "references/geometry/wheels-and-tires.md",
-    "sdk/_docs/base/49_hinges.md": "references/geometry/hinges.md",
-    "sdk/_docs/cadquery/35_cadquery.md": "references/cadquery/overview.md",
-    "sdk/_docs/cadquery/36_cadquery_primer.md": "references/cadquery/primer.md",
-    "sdk/_docs/cadquery/37_cadquery_workplane.md": "references/cadquery/workplane.md",
-    "sdk/_docs/cadquery/38_cadquery_sketch.md": "references/cadquery/sketch.md",
-    "sdk/_docs/cadquery/39_cadquery_assembly.md": "references/cadquery/assembly.md",
-    "sdk/_docs/cadquery/39d_cadquery_gears.md": "references/cadquery/gears.md",
-    "sdk/_docs/cadquery/39b_cadquery_free_function.md": "references/cadquery/free-functions.md",
     "sdk/_docs/cadquery/39c_cadquery_api_ref.md": "references/cadquery/api-ref.md",
 }

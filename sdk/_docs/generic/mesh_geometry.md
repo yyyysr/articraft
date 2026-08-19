@@ -7,6 +7,11 @@ profiles, extrusions, sweeps, openings, booleans, transforms, and managed mesh
 export. Use native `Box`, `Cylinder`, or `Sphere` instead when the visible shape
 is exactly representable by a primitive.
 
+Procedural mesh is commonly an alternative to CadQuery or section-driven loft
+authoring for a primary part. Use
+`docs/sdk/references/modeling-strategy.md` to select the path, then read this
+page when procedural mesh is the intended implementation.
+
 ## Core Mesh Type
 
 ```python
@@ -166,3 +171,7 @@ register a managed SDK mesh.
 Angles use radians and the right-hand rule unless a parameter explicitly names
 degrees. Verify that intended solids are closed and that openings are actual
 topology rather than dark surfaces or overlapping fragments.
+
+Stop reading when the current mesh operation, topology requirements, and
+managed export call are resolved. Do not continue into CadQuery details unless
+evidence shows the chosen mesh path cannot represent the required solid.
