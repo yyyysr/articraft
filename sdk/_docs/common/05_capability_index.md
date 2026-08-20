@@ -33,11 +33,36 @@ collision, placement, and visible materials.
 - Section-driven continuous forms:
   `docs/sdk/references/geometry/section-lofts.md`.
 
+For visible rounded or manufactured forms, use the selected overview together
+with its edge-treatment guidance:
+
+- rounded appliance shell, softened door, or radiused panel:
+  `docs/sdk/references/geometry/mesh-geometry.md` for rounded profiles and
+  `docs/sdk/references/cadquery/overview.md` for fillets/chamfers;
+- upholstered seat, cushion, or dome:
+  `docs/sdk/references/geometry/mesh-geometry.md` for dome/capsule/loft forms;
+- tapered pedestal, lathed base, or tubular footrest:
+  `docs/sdk/references/geometry/mesh-geometry.md` for lathe/torus/sweep forms;
+- exact CadQuery edge selection or a failed fillet/chamfer call:
+  `docs/sdk/references/cadquery/api-ref.md` as a detail lookup.
+
 CadQuery, procedural mesh, and section lofts are alternative primary
 representations for many parts. Read their overview guidance to choose; do not
-load every detailed path. The CadQuery API reference is a detail page for an
-exact unresolved call:
-`docs/sdk/references/cadquery/api-ref.md`.
+load every detailed path. After choosing CadQuery, read
+`docs/sdk/references/cadquery/helpers.md` when the current change
+needs managed mesh export, component splitting, unit conversion, material
+region splitting, or coordination between mesh-local and articulation frames.
+The CadQuery API reference is a separate detail page for an exact unresolved
+CadQuery call: `docs/sdk/references/cadquery/api-ref.md`.
+
+After choosing procedural mesh, use
+`docs/sdk/references/geometry/mesh-api.md` only when the overview does not
+resolve a helper signature, profile/spline operation, shell helper, opening,
+or export detail. Use `read_file(section="Profile and Shell Helpers")` or the
+corresponding detail heading when only one topic is needed. After choosing section lofting, use
+`docs/sdk/references/geometry/section-lofts-api.md` only for the complete loft
+specification, repair behavior, or a concrete advanced control. These are
+Detail pages for the selected path, not additional geometry alternatives.
 
 For managed/imported mesh ownership read `docs/sdk/references/assets.md`. For
 semantic mounting and coordinate placement read
@@ -54,6 +79,13 @@ Include the selected geometry reference in the same working set when a moving
 part's local frame, retained insertion, clearance, or shape must be designed
 around its joint.
 
+For a common door, drawer, fixed attachment, or swivel assembly, start with
+`docs/sdk/references/components/assembly-patterns.md`. It contains minimal
+copyable templates for visual binding, enum-safe articulation calls, bounded
+revolute/prismatic joints, and continuous swivels. For exposed hinge leaves,
+knuckles, or pin detail, add
+`docs/sdk/references/components/hinges.md` as a focused component reference.
+
 ## Appearance And Materials
 
 Basic visual material binding is documented in
@@ -61,6 +93,11 @@ Basic visual material binding is documented in
 `docs/sdk/references/material-catalogs.md` only when the current change selects
 catalog materials, textures, or renderer fallbacks. Appearance can be planned
 with geometry when material regions affect how visuals are split.
+
+For a new asset, search installed catalog materials before settling for inline
+colors when named finishes such as wood, metal, stone, fabric, glass, or coated
+appliance surfaces may be represented. Catalog appearance does not determine
+physical density or contact behavior.
 
 ## Collision
 

@@ -170,6 +170,7 @@ _DOC_PATH_ALIASES = {
     "sdk/_docs/generic/modeling_strategy.md": "references/modeling-strategy.md",
     "sdk/_docs/generic/core_types.md": "references/core-types.md",
     "sdk/_docs/generic/articulated_object.md": "references/articulated-object.md",
+    "sdk/_docs/generic/assembly_patterns.md": "references/components/assembly-patterns.md",
     "sdk/_docs/generic/physics_parameters.md": "references/physics-parameters.md",
     "sdk/_docs/generic/testing.md": "references/testing.md",
     "sdk/_docs/generic/mesh_geometry.md": "references/geometry/mesh-geometry.md",
@@ -180,5 +181,9 @@ _DOC_PATH_ALIASES = {
     "sdk/_docs/common/40_assets.md": "references/assets.md",
     "sdk/_docs/common/50_placement.md": "references/placement.md",
     "sdk/_docs/common/70_probe_tooling.md": "references/probe-tooling.md",
+    "sdk/_docs/base/40_mesh_geometry.md": "references/geometry/mesh-api.md",
+    "sdk/_docs/base/46_section_lofts.md": "references/geometry/section-lofts-api.md",
+    "sdk/_docs/base/49_hinges.md": "references/components/hinges.md",
+    "sdk/_docs/cadquery/35_cadquery.md": "references/cadquery/helpers.md",
     "sdk/_docs/cadquery/39c_cadquery_api_ref.md": "references/cadquery/api-ref.md",
 }

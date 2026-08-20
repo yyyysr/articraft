@@ -85,6 +85,30 @@ def test_material_preserves_positional_rgba_usage() -> None:
     assert material.rgba == (0.1, 0.2, 0.3, 1.0)
 
 
+def test_articulated_object_material_accepts_material_compatibility_form() -> None:
+    model = ArticulatedObject(name="material_compat")
+    material = Material("wood", catalog="wood_furniture", catalog_material="wood_001")
+
+    registered = model.material(material)
+
+    assert registered is material
+    assert model.materials == [material]
+
+
+def test_articulated_object_material_rejects_mixed_material_forms() -> None:
+    model = ArticulatedObject(name="material_compat")
+
+    with pytest.raises(ValidationError, match="cannot be combined"):
+        model.material(Material("wood"), rgba=(0.2, 0.2, 0.2, 1.0))
+
+
+def test_articulated_object_material_rejects_non_string_name() -> None:
+    model = ArticulatedObject(name="material_validation")
+
+    with pytest.raises(ValidationError, match="string or Material instance"):
+        model.material(123)  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (

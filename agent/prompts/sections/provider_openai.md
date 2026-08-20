@@ -4,7 +4,7 @@
 - `apply_patch` accepts a Codex-style patch in the required JSON `input` string.
 - `compile_model` runs compile + QC and returns structured `<compile_signals>`.
 - `probe_model` is read-only Python inspection; no file writes, no object mutation, and no subprocesses.
-- `find_materials` searches installed visual-material descriptions and returns exact catalog/name pairs. Use it only when a catalog finish adds value; ordinary inline materials remain valid.
+- `find_materials` searches installed visual-material descriptions and returns exact catalog/id pairs. Search it first when a plausible catalog finish may exist; use inline material only when no suitable entry is returned.
 - Read exact current file text with `read_file(path="model.py")` before you patch.
 - Prefer several small `apply_patch` edits over one giant patch or full-file rewrite.
 - Modify the existing `model.py` rather than assuming a blank start.

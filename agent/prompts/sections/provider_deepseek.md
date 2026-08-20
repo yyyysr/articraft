@@ -5,7 +5,7 @@
 - `write_file` rewrites the full `model.py` script when a larger replacement is intentional; include imports, `build_object_model()`, `run_tests()`, and `object_model = build_object_model()`.
 - `compile_model` runs compile + QC and returns structured `<compile_signals>`.
 - `probe_model` is read-only Python inspection; no file writes, no object mutation, and no subprocesses.
-- `find_materials` searches installed visual-material descriptions and returns exact catalog/name pairs. Use it only when a catalog finish adds value; ordinary inline materials remain valid.
+- `find_materials` searches installed visual-material descriptions and returns exact catalog/id pairs. Search it first when a plausible catalog finish may exist; use inline material only when no suitable entry is returned.
 - Prefer small exact `replace` edits over broad rewrites.
 - If `replace` fails because `old_string` did not match, call `read_file(path="model.py")` again and retry with a smaller exact snippet.
 - Modify the existing `model.py`; use `write_file` only when you intentionally want to replace the whole script.

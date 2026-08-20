@@ -1,5 +1,10 @@
 # Procedural Meshes
 
+> Detail reference. Read
+> `docs/sdk/references/geometry/mesh-geometry.md` first. Use this page only
+> after choosing procedural mesh and identifying a concrete helper, signature,
+> or advanced behavior needed by the next patch.
+
 ## Purpose
 
 Use this page for low-level procedural mesh authoring: primitive solids,
@@ -51,15 +56,10 @@ from sdk import (
 - panel opening helper: `cut_opening_on_face(...)`
 - export helper: `mesh_from_geometry(...)`
 
-Focused semantic geometry references:
-
-- `41_panels_and_grilles.md` for perforated, slotted, and vent-grille faces
-- `42_brackets_and_mounts.md` for clevises, forks, and yokes
-- `43_fans_and_rotors.md` for axial rotors and blower wheels
-- `44_knobs_and_controls.md` for knobs and control caps
-- `47_bezels_and_frames.md` for bezels, trims, and framed openings
-- `48_wheels_and_tires.md` for wheels and tire visuals
-- `49_hinges.md` for exposed utility hinge geometry
+The SDK also provides semantic geometry families for panels and grilles,
+brackets and mounts, fans and rotors, knobs and controls, bezels and frames,
+wheels and tires, and exposed hinges. Use the corresponding public helper when
+that component family is a better fit than low-level mesh construction.
 
 ## Core Mesh Type
 
@@ -183,7 +183,8 @@ SweepGeometry(profile, path, *, cap=False, closed=True)
 - `profile`: 2D profile.
 - `path`: 3D path points.
 - Use this only for simple translational sweeps. For tube- and rail-like parts,
-  see `45_wires.md`.
+  prefer spline interpolation and explicit frame helpers over manually
+  constructing densely sampled paths.
 
 ## Profile and Shell Helpers
 
@@ -343,8 +344,8 @@ save_mesh_geometry(
   semantic shape such as a knob, bezel, wheel, vent grille, or bracket.
 - Prefer `section_loft(...)` over raw `LoftGeometry(...)` for new shell/exterior
   loft authoring.
-- Prefer the spline-first wire/tube guidance in `45_wires.md` over manual
-  sweeps for rails, loops, and frames. In practice, start with
+- Prefer spline-first wire/tube helpers over manual sweeps for rails, loops,
+  and frames. In practice, start with
   `tube_from_spline_points(...)` or `sweep_profile_along_spline(...)` unless
   the geometry is intentionally hard-cornered.
 
@@ -379,16 +380,15 @@ lip = LatheGeometry.from_shell_profiles(
 
 ## See Also
 
-- `41_panels_and_grilles.md` for panel-face geometry helpers
-- `42_brackets_and_mounts.md` for semantic bracket helpers
-- `43_fans_and_rotors.md` for fan and blower geometry helpers
-- `44_knobs_and_controls.md` for control-surface geometry helpers
-- `45_wires.md` for rails, loops, tubes, and frames
-- `46_section_lofts.md` for the recommended loft API
-- `47_bezels_and_frames.md` for display, trim, and frame helpers
-- `48_wheels_and_tires.md` for wheel and tire geometry helpers
-- `49_hinges.md` for exposed hinge geometry helpers
-- `50_placement.md` for wrapping and mounting mesh-backed geometry
+- `docs/sdk/references/geometry/mesh-geometry.md` for representation choice
+  and the minimum procedural-mesh contract
+- `docs/sdk/references/geometry/section-lofts.md` for section-loft strategy
+- `docs/sdk/references/geometry/section-lofts-api.md` for the complete section
+  loft specification and repair reference
+- `docs/sdk/references/placement.md` for wrapping and mounting mesh-backed
+  geometry
+- `docs/sdk/references/cadquery/overview.md` when a feature-based solid is a
+  better primary representation
 
 ## Clarifications for agent usage
 

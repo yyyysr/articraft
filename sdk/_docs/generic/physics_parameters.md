@@ -70,6 +70,21 @@ the SDK derive unresolved mass properties only when collision geometry is a
 reasonable proxy for mass distribution. Do not invent a detailed inertia tensor
 for a complex mesh without evidence.
 
+Treat the choice as explicit even though collision-derived mass remains a
+backward-compatible fallback:
+
+- uniform solid part: `physics_material` density plus collision-derived mass
+  can be appropriate;
+- hollow shell, enclosure, furniture assembly, appliance body, composite door,
+  or multi-material part: author a plausible assembled-part mass with
+  `Inertial.from_geometry(...)` and use a simple enclosing primitive only to
+  approximate center of mass and inertia;
+- allocate a known total asset mass across rigid parts before tuning individual
+  values, so independently estimated links do not create an implausible total.
+
+`PhysicsMaterial` still controls contact behavior when an explicit inertial is
+present. Setting mass does not remove the need for friction and restitution.
+
 Fill factors can sanity-check a mass estimate but must not be encoded as
 collision scale:
 
@@ -130,7 +145,7 @@ must not be implied for unrelated assets.
 - `motion_properties=None`: leave movable-joint dynamics unresolved and warn.
 - Explicit zero damping/friction: intentionally free joint; do not warn.
 - `inertial=None`: derive mass properties from collision geometry and density;
-  USD records `articraft:inertialSource="estimated_collision"`.
+  warn and record `articraft:inertialSource="estimated_collision"` in USD.
 
 Warnings are non-blocking for backward compatibility. Resolve them when object
 semantics provide evidence; do not silence them with invented precision.

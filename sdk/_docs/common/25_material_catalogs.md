@@ -34,6 +34,10 @@ shell_finish = model.material(
 shell.visual(shell_geometry, material=shell_finish, name="outer_shell")
 ```
 
+`model.material("name", ...)` is the canonical registration form. The
+compatibility form `model.material(Material("name", ...))` is accepted, but do
+not combine a `Material` object with separate material keyword arguments.
+
 Texture-backed catalogs use the same API:
 
 ```python

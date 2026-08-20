@@ -81,6 +81,21 @@ Visual(
 )
 ```
 
+Register materials with the string-form helper, which is the canonical authoring
+form:
+
+```python
+finish = model.material(
+    "finish",
+    catalog="wood_furniture",
+    catalog_material="wood_021",
+)
+```
+
+For compatibility, `model.material(Material("finish", ...))` is also accepted.
+Do not pass a `Material` object together with separate material keyword
+arguments.
+
 - `color` is a compatibility alias for `rgba`; do not pass both.
 - Catalog materials require both `catalog` and `catalog_material`. Use exact
   identifiers returned by `find_materials`; do not invent identifiers or
@@ -156,9 +171,12 @@ Mimic(
 Use `Mimic` only for linear scalar coupling:
 `q_follower = multiplier * q_source + offset`.
 
-`ArticulationType` values are `FIXED`, `REVOLUTE`, `CONTINUOUS`, `PRISMATIC`,
-and `FLOATING`. Revolute and prismatic joints require meaningful axes and
-limits; continuous joints have no lower/upper position bounds.
+Use enum members `ArticulationType.FIXED`, `ArticulationType.REVOLUTE`,
+`ArticulationType.CONTINUOUS`, `ArticulationType.PRISMATIC`, and
+`ArticulationType.FLOATING`. Raw string values, when needed, are lowercase
+(`"fixed"`, `"revolute"`, `"continuous"`, `"prismatic"`, `"floating"`).
+Revolute and prismatic joints require meaningful axes and both lower/upper
+limits; continuous joints require effort/velocity limits but no position bounds.
 
 ## Resolved Objects
 

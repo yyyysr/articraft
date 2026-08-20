@@ -85,6 +85,50 @@ def _physics_authoring_warnings(globals_dict: dict[str, Any]) -> list[str]:
             "part's bulk/contact material is known."
         )
 
+    unbound_visuals: list[str] = []
+    for part in parts:
+        part_name = str(getattr(part, "name", "<unnamed>"))
+        for index, visual in enumerate(list(getattr(part, "visuals", ()) or ())):
+            if getattr(visual, "material", None) is not None:
+                continue
+            visual_name = str(getattr(visual, "name", None) or f"visual_{index}")
+            unbound_visuals.append(f"{part_name}/{visual_name}")
+    if unbound_visuals:
+        warnings.append(
+            "Appearance authoring warning (non-blocking): "
+            f"{len(unbound_visuals)} visual(s) have no material binding: {unbound_visuals}. "
+            "Search installed catalog materials first when a plausible finish may exist; use an "
+            "inline material only when no suitable catalog entry is returned."
+        )
+
+    estimated_inertial_parts = [
+        str(getattr(part, "name", "<unnamed>"))
+        for part in parts
+        if getattr(part, "inertial", None) is None
+    ]
+    if estimated_inertial_parts:
+        high_density_multipart = [
+            str(getattr(part, "name", "<unnamed>"))
+            for part in parts
+            if getattr(part, "inertial", None) is None
+            and float(getattr(getattr(part, "physics_material", None), "density", 700.0)) >= 2000.0
+            and len(list(getattr(part, "visuals", ()) or ())) > 1
+        ]
+        detail = (
+            f" High-density multi-visual candidate(s) requiring particular review: "
+            f"{high_density_multipart}."
+            if high_density_multipart
+            else ""
+        )
+        warnings.append(
+            "Physics authoring warning (non-blocking): "
+            f"{len(estimated_inertial_parts)} part(s) rely on collision-derived mass/inertia: "
+            f"{estimated_inertial_parts}. This is appropriate only when compiled collision "
+            "geometry reasonably represents a uniform solid; author a plausible explicit "
+            "assembled-part mass for hollow, thin-wall, or composite construction."
+            f"{detail}"
+        )
+
     movable_types = {"revolute", "continuous", "prismatic"}
     missing_dynamics_joints: list[str] = []
     for articulation in list(getattr(object_model, "articulations", ()) or ()):

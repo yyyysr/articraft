@@ -13,7 +13,15 @@ from agent.compiler import (
     update_manifest,
 )
 from agent.runner import compile_urdf
-from sdk import ArticulatedObject, ArticulationType, MotionLimits, MotionProperties, PhysicsMaterial
+from sdk import (
+    ArticulatedObject,
+    ArticulationType,
+    Box,
+    Material,
+    MotionLimits,
+    MotionProperties,
+    PhysicsMaterial,
+)
 
 _REMOVED_PACKAGE = "_".join(("sdk", "hybrid"))
 
@@ -41,14 +49,32 @@ def test_physics_authoring_warnings_report_only_implicit_fallbacks() -> None:
 
     warnings = _physics_authoring_warnings({"object_model": model})
 
-    assert len(warnings) == 2
+    assert len(warnings) == 3
     assert "2 part(s) use the generic PhysicsMaterial fallback" in warnings[0]
     assert "'base'" in warnings[0]
     assert "'free_door'" in warnings[0]
     assert "damped_door" not in warnings[0]
-    assert "1 movable joint(s) have no MotionProperties" in warnings[1]
-    assert "free_hinge" in warnings[1]
-    assert "damped_hinge" not in warnings[1]
+    assert "3 part(s) rely on collision-derived mass/inertia" in warnings[1]
+    assert "1 movable joint(s) have no MotionProperties" in warnings[2]
+    assert "free_hinge" in warnings[2]
+    assert "damped_hinge" not in warnings[2]
+
+
+def test_physics_authoring_warnings_flag_material_and_high_density_assembly() -> None:
+    model = ArticulatedObject(name="microwave_warning")
+    steel = PhysicsMaterial("steel", density=7800.0)
+    painted = model.material(Material("painted", rgba=(0.8, 0.8, 0.8, 1.0)))
+    body = model.part("body", physics_material=steel)
+    body.visual(Box((0.5, 0.4, 0.02)), material=painted, name="top")
+    body.visual(Box((0.5, 0.02, 0.3)), name="rear")
+
+    warnings = _physics_authoring_warnings({"object_model": model})
+
+    assert len(warnings) == 2
+    assert "body/rear" in warnings[0]
+    assert "collision-derived mass/inertia" in warnings[1]
+    assert "High-density multi-visual candidate(s)" in warnings[1]
+    assert "'body'" in warnings[1]
 
 
 def _write_isolated_part_model_script(

@@ -69,8 +69,13 @@ export_cadquery_components(...) -> list[CadQueryMeshExport]
 `size_xyz`. Use `save_cadquery_obj(model, path, ...)` only when an external tool
 requires an exact OBJ path.
 
-For full CadQuery call signatures, read
-`docs/sdk/references/cadquery/api-ref.md` only after choosing the CadQuery path.
+For the complete Articraft integration contract, read
+`docs/sdk/references/cadquery/helpers.md` when the current change
+depends on managed export results, component splitting, unit conversion,
+material regions, or local-frame behavior. Use `read_file(section="Units")`
+or another matching heading when only one integration topic is needed. For full CadQuery call signatures,
+read `docs/sdk/references/cadquery/api-ref.md` only when a specific CadQuery
+operation remains unresolved.
 
 ## Representation Boundaries
 
@@ -98,6 +103,34 @@ For full CadQuery call signatures, read
 - Tessellation tolerance controls the exported mesh, not the underlying CAD
   solid. Tighten it only where visible curvature requires it.
 
+## Common Edge And Form Patterns
+
+Apply edge finishing after the primary solid is coherent and before managed
+mesh export. Select only the intended edges; broad unscoped selectors can round
+mounting edges or change clearances.
+
+```python
+rounded_panel = (
+    cq.Workplane("XY")
+    .box(0.60, 0.04, 0.80)
+    .edges("|Z")
+    .fillet(0.018)
+)
+
+beveled_base = (
+    cq.Workplane("XY")
+    .cylinder(0.06, 0.24)
+    .edges(">Z")
+    .chamfer(0.008)
+)
+```
+
+For padded or curved forms, use a rounded profile or sections rather than
+stacking thin cylinders. For a shell, create the outer solid, apply the visible
+fillets, then shell or cut the opening while preserving wall thickness. Keep
+the joint pivot and child local frame independent from the CAD workplane, and
+export with `mesh_from_cadquery(...)` only after checking the resulting bounds.
+
 Stop reading when the current solid operations and managed export path are
-clear. Read `docs/sdk/references/cadquery/api-ref.md` only when a specific
-CadQuery signature remains unresolved.
+clear. Do not read both integration and API details unless the current patch
+actually depends on both.

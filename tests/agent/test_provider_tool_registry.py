@@ -64,6 +64,14 @@ def test_provider_tool_registry_schemas() -> None:
         "does not expose usd shader paths"
         in find_materials_schema["function"]["description"].lower()
     )
+    assert (
+        "search before authoring an inline visual material"
+        in find_materials_schema["function"]["description"].lower()
+    )
+    assert (
+        "does not define physicsmaterial values"
+        in find_materials_schema["function"]["description"].lower()
+    )
     gemini_schemas = gemini_registry.get_tool_schemas()
     codex_cli_schemas = codex_cli_registry.get_tool_schemas()
     replace_schema = next(
@@ -86,7 +94,7 @@ def test_provider_tool_registry_schemas() -> None:
     assert "Single-file mode only" in apply_patch_description
     assert "`*** Add File`, `*** Delete File`, or `*** Move to`" in apply_patch_description
     read_file_props = read_file_schema["function"]["parameters"]["properties"]
-    assert set(read_file_props.keys()) == {"path", "offset", "limit"}
+    assert set(read_file_props.keys()) == {"path", "offset", "limit", "section"}
     replace_props = replace_schema["function"]["parameters"]["properties"]
     assert set(replace_props.keys()) == {
         "old_string",

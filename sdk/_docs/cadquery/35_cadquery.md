@@ -1,4 +1,4 @@
-# CadQuery Helpers
+# Articraft CadQuery Helpers
 
 ## Purpose
 
@@ -118,8 +118,8 @@ CadQueryMeshExport(
 - `name`: logical mesh name such as `"door_panel"` or `"door_panel.obj"`.
   Do not pass a filesystem path.
 - `assets`: optional explicit asset owner or root. Read
-  `../common/40_assets.md` when you need stable on-disk paths outside the
-  managed harness.
+  `docs/sdk/references/assets.md` when you need stable on-disk paths outside
+  the managed harness.
 - `tolerance`: linear tessellation tolerance.
 - `angular_tolerance`: angular tessellation tolerance in radians.
 - `unit_scale`: scales both tessellated geometry and CadQuery assembly
@@ -213,6 +213,7 @@ If different regions need different materials, export them as separate
 CadQuery meshes or components and attach each one as its own visual with its
 own `material=...`.
 
+```python
 door_shape = (
     cq.Workplane("XY")
     .box(0.58, 0.02, 0.78)
@@ -279,8 +280,6 @@ def build_object_model() -> ArticulatedObject:
 
 ## See Also
 
-- `../common/80_testing.md` for the shared testing API
-- `../common/00_quickstart.md` for the overall script contract
-- `39d_cadquery_gears.md` for the vendored gear builders and Workplane gear
-  plugin helpers
-- `../common/40_assets.md` for explicit asset-root control
+- `docs/sdk/references/testing.md` for the shared testing API
+- `docs/sdk/references/quickstart.md` for the overall script contract
+- `docs/sdk/references/assets.md` for explicit asset-root control

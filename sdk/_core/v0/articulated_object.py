@@ -106,7 +106,7 @@ class ArticulatedObject:
 
     def part(
         self,
-        name: str,
+        name: Union[str, Material],
         *,
         visuals: Optional[Iterable[Visual]] = None,
         collision_enabled: bool = True,
@@ -224,6 +224,19 @@ class ArticulatedObject:
         catalog_material: Optional[str] = None,
         parameters: Optional[Mapping[str, object]] = None,
     ) -> Material:
+        if isinstance(name, Material):
+            if any(
+                value is not None
+                for value in (rgba, color, texture, catalog, catalog_material, parameters)
+            ):
+                raise ValidationError(
+                    "material object form cannot be combined with rgba, color, texture, "
+                    "catalog, catalog_material, or parameters"
+                )
+            self.materials.append(name)
+            return name
+        if not isinstance(name, str):
+            raise ValidationError("material name must be a string or Material instance")
         if rgba is not None and color is not None:
             raise ValidationError("Material cannot set both rgba and color")
         material = Material(

@@ -4,6 +4,8 @@ ReadFile tool - Read an exact file from the virtual workspace with line numbers.
 
 from __future__ import annotations
 
+import re
+
 import aiofiles
 
 from agent.tools.base import (
@@ -23,6 +25,7 @@ class ReadFileParams(ToolParamsModel):
     path: str
     offset: int | None = None
     limit: int | None = None
+    section: str | None = None
 
 
 class ReadFileInvocation(BoundFileToolInvocation[ReadFileParams, str]):
@@ -34,11 +37,13 @@ class ReadFileInvocation(BoundFileToolInvocation[ReadFileParams, str]):
         *,
         offset_provided: bool = False,
         limit_provided: bool = False,
+        section_provided: bool = False,
     ):
         super().__init__(params)
         self.virtual_workspace: VirtualWorkspace | None = None
         self.offset_provided = offset_provided
         self.limit_provided = limit_provided
+        self.section_provided = section_provided
 
     def bind_virtual_workspace(self, workspace: VirtualWorkspace) -> None:
         self.virtual_workspace = workspace
@@ -64,6 +69,19 @@ class ReadFileInvocation(BoundFileToolInvocation[ReadFileParams, str]):
                 return ToolResult(error=f"Unable to resolve {self.params.path}")
 
             lines = full_code.splitlines()
+            line_number_base = 0
+            if self.section_provided and self.params.section is None:
+                return ToolResult(error="section must not be null")
+            if self.params.section is not None and (self.offset_provided or self.limit_provided):
+                return ToolResult(error="section cannot be combined with offset or limit")
+
+            if self.params.section is not None:
+                lines, section_error, line_number_base = _select_markdown_section(
+                    lines, self.params.section
+                )
+                if section_error is not None:
+                    return ToolResult(error=section_error)
+
             offset = self.params.offset or 1
             if self.offset_provided and self.params.offset is None:
                 return ToolResult(error="offset must be >= 1")
@@ -87,7 +105,9 @@ class ReadFileInvocation(BoundFileToolInvocation[ReadFileParams, str]):
                 end = min(len(lines), start + self.params.limit)
             else:
                 end = len(lines)
-            formatted = [f"L{idx}: {lines[idx - 1]}" for idx in range(start + 1, end + 1)]
+            formatted = [
+                f"L{line_number_base + idx}: {lines[idx - 1]}" for idx in range(start + 1, end + 1)
+            ]
             return ToolResult(output="\n".join(formatted))
         except FileNotFoundError:
             return ToolResult(error=f"File {self.params.path} not found")
@@ -108,7 +128,9 @@ class ReadFileTool(BaseDeclarativeTool):
             "Returned lines are formatted as `L{line_number}: ...`.\n\n"
             "Use `offset` to choose the first line (1-indexed) and `limit` to cap the total number "
             "of returned lines. Omit both for a full-file read. Omit `limit` with an explicit `offset` "
-            "to read from that offset to EOF."
+            "to read from that offset to EOF. For Markdown references, use `section` to read one "
+            "heading section without depending on fixed line numbers; do not combine `section` with "
+            "`offset` or `limit`."
         )
         schema = make_tool_schema(
             name="read_file",
@@ -129,6 +151,13 @@ class ReadFileTool(BaseDeclarativeTool):
                     "type": "integer",
                     "description": ("Optional. Maximum number of lines to return. Omit for EOF."),
                 },
+                "section": {
+                    "type": "string",
+                    "description": (
+                        "Optional Markdown heading text, such as `Profiles And Curves`. "
+                        "Reads that heading through the next heading of the same or higher level."
+                    ),
+                },
             },
             required=["path"],
         )
@@ -140,5 +169,35 @@ class ReadFileTool(BaseDeclarativeTool):
             validated,
             offset_provided="offset" in params and params["offset"] is not None,
             limit_provided="limit" in params and params["limit"] is not None,
+            section_provided="section" in params and params["section"] is not None,
         )
         return invocation
+
+
+def _select_markdown_section(lines: list[str], requested: str) -> tuple[list[str], str | None, int]:
+    target = " ".join(str(requested).strip().lstrip("#").split()).casefold()
+    if not target:
+        return [], "section must not be empty", 0
+
+    headings: list[tuple[int, int, str]] = []
+    for index, line in enumerate(lines):
+        match = re.match(r"^(#{1,6})\s+(.+?)\s*#*\s*$", line)
+        if match is None:
+            continue
+        title = " ".join(match.group(2).split())
+        headings.append((index, len(match.group(1)), title))
+
+    matches = [heading for heading in headings if heading[2].casefold() == target]
+    if not matches:
+        available = ", ".join(title for _, _, title in headings)
+        return [], f"Unknown section {requested!r}. Available sections: {available}", 0
+    if len(matches) > 1:
+        return [], f"Section {requested!r} is ambiguous; use a more specific heading", 0
+
+    start, level, _ = matches[0]
+    end = len(lines)
+    for candidate, candidate_level, _ in headings:
+        if candidate > start and candidate_level <= level:
+            end = candidate
+            break
+    return lines[start:end], None, start

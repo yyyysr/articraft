@@ -12,32 +12,30 @@ authoring for a primary part. Use
 `docs/sdk/references/modeling-strategy.md` to select the path, then read this
 page when procedural mesh is the intended implementation.
 
+This page is the overview and minimum authoring contract. Read
+`docs/sdk/references/geometry/mesh-api.md` only when the current patch needs a
+helper signature or behavior not resolved here, such as advanced profile and
+spline helpers, side-shell construction, face openings, or explicit mesh
+export. Use `read_file(section="Profile and Shell Helpers")` when only one detail
+topic is needed. Do not load the detail page merely because procedural mesh
+was chosen.
+
 ## Core Mesh Type
 
 ```python
-MeshGeometry(
-    vertices: list[tuple[float, float, float]] = [],
-    faces: list[tuple[int, int, int]] = [],
-)
-```
-
-```python
+MeshGeometry(vertices=[], faces=[])
 geom.add_vertex(x, y, z) -> int
 geom.add_face(a, b, c) -> None
 geom.copy() -> MeshGeometry
-geom.clone() -> MeshGeometry
 geom.merge(other) -> MeshGeometry
 geom.translate(dx, dy, dz) -> MeshGeometry
 geom.scale(sx, sy=None, sz=None) -> MeshGeometry
 geom.rotate(axis, angle, origin=(0.0, 0.0, 0.0)) -> MeshGeometry
-geom.rotate_x(angle) -> MeshGeometry
-geom.rotate_y(angle) -> MeshGeometry
-geom.rotate_z(angle) -> MeshGeometry
 ```
 
 Vertices are meters and faces contain zero-based triangle indices. Transforms
-and `merge` mutate the object and return `self`; copy before reusing a source in
-multiple variants.
+and `merge` mutate the object and return `self`; copy or clone before reusing a
+source in multiple variants. Axis-specific rotation helpers are also available.
 
 ## Tessellated Builders
 
@@ -59,32 +57,9 @@ Cylinders, cones, and capsules extend along local Z.
 
 ```python
 LatheGeometry(profile, *, segments=32, closed=True)
-LatheGeometry.from_shell_profiles(
-    outer_profile,
-    inner_profile,
-    *,
-    segments=32,
-    start_cap="flat",
-    end_cap="flat",
-    lip_samples=6,
-)
-
 LoftGeometry(profiles, *, cap=True, closed=True)
-
 ExtrudeGeometry(profile, height, *, cap=True, center=True, closed=True)
-ExtrudeGeometry.centered(profile, height, *, cap=True, closed=True)
-ExtrudeGeometry.from_z0(profile, height, *, cap=True, closed=True)
-
-ExtrudeWithHolesGeometry(
-    outer_profile,
-    hole_profiles,
-    height,
-    *,
-    cap=True,
-    center=True,
-    closed=True,
-)
-
+ExtrudeWithHolesGeometry(outer_profile, hole_profiles, height, ...)
 SweepGeometry(profile, path, *, cap=False, closed=True)
 ```
 
@@ -94,6 +69,9 @@ SweepGeometry(profile, path, *, cap=False, closed=True)
 - Extrude profiles are closed XY loops and extend along Z.
 - `ExtrudeWithHolesGeometry` creates actual through-cut loops inside an outer
   profile.
+- `LatheGeometry.from_shell_profiles(...)` creates an outer/inner revolved
+  shell. `ExtrudeGeometry.centered(...)` and `.from_z0(...)` make the intended
+  Z span explicit.
 - Basic `SweepGeometry` follows path points but does not replace a CAD kernel
   for complex solid features.
 
@@ -114,24 +92,30 @@ Profiles return centered counter-clockwise XY loops. Sampling is explicit;
 choose resolution from visible curvature and required output cost rather than
 raising it uniformly.
 
-Side-loft helpers use sections of `(y, z_min, z_max, width)` and loft along Y:
+For appliance-like side shells, `superellipse_side_loft(...)`,
+`split_superellipse_side_loft(...)`, and `resample_side_sections(...)` use
+sections of `(y, z_min, z_max, width)` and loft along Y. Read the detail
+`Profile and Shell Helpers` section for their full controls.
+
+Use these builders for common rounded forms instead of native sharp primitives:
 
 ```python
-superellipse_side_loft(
-    sections, *, exponents=2.8, segments=56, cap=True, closed=True,
-    min_height=0.0001, min_width=0.0001,
-) -> MeshGeometry
+seat_profile = rounded_rect_profile(0.42, 0.42, 0.06, corner_segments=8)
+seat = ExtrudeGeometry(seat_profile, 0.10, cap=True, center=True)
 
-split_superellipse_side_loft(
-    sections, *, split_y, exponents=2.8, segments=56, cap=True, closed=True,
-    min_height=0.0001, min_width=0.0001,
-) -> tuple[MeshGeometry, MeshGeometry, tuple[float, float, float, float]]
+soft_base = LatheGeometry(
+    [(0.00, 0.00), (0.20, 0.015), (0.23, 0.045), (0.18, 0.075)],
+    segments=48,
+)
 
-resample_side_sections(
-    sections, *, samples_per_span=2, smooth_passes=0,
-    min_height=0.0001, min_width=0.0001,
-) -> list[tuple[float, float, float, float]]
+footrest = TorusGeometry(0.17, 0.012, radial_segments=24, tubular_segments=48)
 ```
+
+`rounded_rect_profile` is suitable for appliance doors and padded square
+panels; `superellipse_profile` or side lofts suit softened appliance shells;
+`LatheGeometry` suits rotational bases; `DomeGeometry`, `CapsuleGeometry`, or
+section lofts suit cushions. Increase sampling only where the silhouette needs
+it, and verify that the generated mesh remains closed and collision-suitable.
 
 ## Openings And Booleans
 
@@ -173,5 +157,6 @@ degrees. Verify that intended solids are closed and that openings are actual
 topology rather than dark surfaces or overlapping fragments.
 
 Stop reading when the current mesh operation, topology requirements, and
-managed export call are resolved. Do not continue into CadQuery details unless
-evidence shows the chosen mesh path cannot represent the required solid.
+managed export call are resolved. Use the detail API page only for a remaining
+implementation question. Do not continue into CadQuery details unless evidence
+shows the chosen mesh path cannot represent the required solid.

@@ -78,10 +78,13 @@ model.articulation(
   Do not compensate for a reversed axis by swapping lower and upper limits.
 - A movable child has exactly one incoming articulation in the exported tree.
 
-Use `FIXED` for rigid relationships, `REVOLUTE` for bounded rotation,
-`CONTINUOUS` for unbounded rotation, and `PRISMATIC` for bounded translation.
-`FLOATING` represents an unconstrained six-degree-of-freedom relationship and
-should be used only when that behavior is intentional and supported downstream.
+Prefer the enum members `ArticulationType.FIXED`,
+`ArticulationType.REVOLUTE`, `ArticulationType.CONTINUOUS`, and
+`ArticulationType.PRISMATIC` (import `ArticulationType` from `sdk`). If a raw
+string is unavoidable, use the lowercase values `"fixed"`, `"revolute"`,
+`"continuous"`, or `"prismatic"`. `FLOATING` represents an unconstrained
+six-degree-of-freedom relationship and should be used only when that behavior
+is intentional and supported downstream.
 
 For a deliberately free movable joint, set explicit zero damping and friction.
 Add nonzero passive dynamics only when the mechanism semantics justify them.

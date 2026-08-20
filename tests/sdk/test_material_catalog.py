@@ -114,6 +114,27 @@ def _wood_catalog_model() -> ArticulatedObject:
     return model
 
 
+def test_material_object_compatibility_form_preserves_catalog_texture_package(
+    tmp_path: Path,
+) -> None:
+    model = ArticulatedObject(name="wood_compat")
+    finish = model.material(
+        Material("wood_finish", catalog="wood_furniture", catalog_material="wood_001")
+    )
+    model.part("body").visual(Box((0.4, 0.3, 0.2)), material=finish, name="panel")
+
+    usd_bytes, assets = compile_object_to_usd_package(model, asset_root=tmp_path)
+
+    assert "textures/Wood001_1K-PNG_Color.png" in assets
+    usd_path = tmp_path / "model.usd"
+    usd_path.write_bytes(usd_bytes)
+    stage = Usd.Stage.Open(str(usd_path))
+    material = UsdShade.Material(stage.GetPrimAtPath("/root/Looks/wood_finish"))
+    assert material.GetPrim().GetAttribute("articraft:catalog").Get() == "wood_furniture"
+    shader = UsdShade.Shader(stage.GetPrimAtPath("/root/Looks/wood_finish/base_color"))
+    assert shader.GetInput("file").Get().path == "textures/Wood001_1K-PNG_Color.png"
+
+
 def test_texture_catalog_resolves_detail_only_after_selection() -> None:
     entry = resolve_material_entry("wood_furniture", "wood_001")
     assert entry.material_id == "wood_001"

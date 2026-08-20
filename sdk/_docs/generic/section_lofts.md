@@ -11,6 +11,12 @@ Section lofting is a selected geometry path, not a prerequisite for all curved
 models. Read this page with the part/articulation reference only when section
 placement and moving-part frames are coupled in the current edit.
 
+This page is the overview and minimum authoring contract. Read
+`docs/sdk/references/geometry/section-lofts-api.md` only when the current patch
+needs the complete `SectionLoftSpec`, exact repair behavior, or a concrete
+advanced control that is not resolved here. Use `read_file(section="Repair")`
+or another matching detail heading when only one topic is needed.
+
 ## Entry Point
 
 ```python
@@ -33,19 +39,13 @@ LoftSection(points: tuple[tuple[float, float, float], ...])
 SectionLoftSpec(
     sections: tuple[LoftSection, ...],
     path: tuple[tuple[float, float, float], ...] | None = None,
-    guide_curves: Mapping[str, tuple[tuple[float, float, float], ...]] | None = None,
     cap: bool = True,
     solid: bool = True,
     symmetry: str | None = None,
     ruled: bool = False,
-    continuity: str = "C2",
-    parametrization: str = "uniform",
-    degree: int = 3,
-    compat: bool = True,
-    smoothing: bool = False,
-    weights: tuple[float, float, float] = (1.0, 1.0, 1.0),
     repair: str = "auto",
     tessellation: LoftTessellation = LoftTessellation(),
+    ...,
 )
 ```
 
@@ -53,9 +53,9 @@ Common controls are `sections`, optional `path`, `cap`, `solid`, `symmetry`,
 `repair`, and `tessellation`. The supported symmetry value is `mirror_yz`.
 Repair modes are `auto`, `mesh`, `kernel`, and `off`.
 
-`guide_curves` supports only `spine`, `aux_spine`, and `binormal`. If no
-explicit path is supplied, `spine` may become the sweep path. Backend tuning
-fields are conditional and are not guaranteed to affect every loft branch.
+Advanced guide curves and backend tuning fields are documented in the detail
+page. They are conditional controls and are not required for ordinary ordered
+section lofts.
 
 ## Repair
 
@@ -82,5 +82,6 @@ sections, it rebuilds with the selected repair mode.
   collision as a solid.
 
 Stop reading when section correspondence, path use, tessellation, and repair
-choices are sufficient for the current loft. Use diagnostic tooling after a
-concrete topology failure rather than preloading unrelated geometry paths.
+choices are sufficient for the current loft. Do not load the detail page or an
+alternative geometry path without a remaining implementation question. Use
+diagnostic tooling after a concrete topology failure.

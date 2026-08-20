@@ -1,5 +1,10 @@
 # Section Lofts
 
+> Detail reference. Read
+> `docs/sdk/references/geometry/section-lofts.md` first. Use this page only
+> when the next patch needs the complete loft specification, exact repair
+> behavior, or a concrete advanced control.
+
 ## Purpose
 
 Use `section_loft(...)` when a shell or exterior form can be described by a
@@ -171,7 +176,14 @@ clean = repair_loft(spec, repair="mesh")
 
 ## See Also
 
-- `40_mesh_geometry.md` for lower-level mesh loft helpers
+- `docs/sdk/references/geometry/section-lofts.md` for representation choice and
+  the minimum section-loft contract
+- `docs/sdk/references/geometry/mesh-geometry.md` for lower-level procedural
+  mesh strategy
+- `docs/sdk/references/geometry/mesh-api.md` for complete lower-level mesh loft
+  and profile helpers
+- `docs/sdk/references/cadquery/overview.md` when downstream solid features
+  make CadQuery a better primary representation
 
 ## Clarifications for agent usage
 

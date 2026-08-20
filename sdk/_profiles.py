@@ -68,6 +68,7 @@ _AGENT_ENTRY_DOCS = (
 _AGENT_REFERENCE_DOCS = (
     Path("sdk/_docs/generic/core_types.md"),
     Path("sdk/_docs/generic/articulated_object.md"),
+    Path("sdk/_docs/generic/assembly_patterns.md"),
     Path("sdk/_docs/generic/mesh_geometry.md"),
     Path("sdk/_docs/generic/section_lofts.md"),
     Path("sdk/_docs/generic/cadquery.md"),
@@ -78,6 +79,10 @@ _AGENT_REFERENCE_DOCS = (
     Path("sdk/_docs/common/40_assets.md"),
     Path("sdk/_docs/common/50_placement.md"),
     Path("sdk/_docs/common/70_probe_tooling.md"),
+    Path("sdk/_docs/base/40_mesh_geometry.md"),
+    Path("sdk/_docs/base/46_section_lofts.md"),
+    Path("sdk/_docs/base/49_hinges.md"),
+    Path("sdk/_docs/cadquery/35_cadquery.md"),
     Path("sdk/_docs/cadquery/39c_cadquery_api_ref.md"),
 )
 

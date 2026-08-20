@@ -58,9 +58,12 @@ class FindMaterialsTool(BaseDeclarativeTool):
             name="find_materials",
             description=(
                 "Search the installed visual-material catalogs by appearance or intended use. "
-                "Returns a small set of valid catalog/id pairs, names, and descriptions. Use the exact "
-                "returned catalog and id in model.material(...); do not invent identifiers. This "
-                "tool does not expose USD shader paths or read the material USD."
+                "Returns a small set of valid catalog/id pairs, names, and descriptions. Search "
+                "before authoring an inline visual material when a plausible catalog finish may "
+                "exist. Use the exact returned catalog and id in model.material(...); do not invent "
+                "identifiers. Fall back to an inline material when no suitable entry is returned. "
+                "This tool does not expose USD shader paths or read the material USD, and catalog "
+                "appearance does not define PhysicsMaterial values."
             ),
             parameters={
                 "query": {
