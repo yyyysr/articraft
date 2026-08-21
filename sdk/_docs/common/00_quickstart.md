@@ -37,3 +37,9 @@ Compare alternative approaches at the overview level, then read detailed API
 references only for the approach you intend to implement. Do not load a page
 only because it may become useful later. Once the working set resolves the
 decisions needed for the next change, stop reading and edit `model.py`.
+
+For a new asset, first implement and compile the geometry, visible interior,
+part structure, primary articulations, supports, and clearances. Unless physical
+behavior changes that structure, defer material-catalog search and detailed
+mass/contact/damping authoring until this structural baseline is free of
+blocking defects; then complete appearance and physics in one focused pass.

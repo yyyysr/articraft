@@ -15,9 +15,12 @@ checklist of pages to read before editing.
   provides a concrete question.
 
 For a new object or a major structural redesign, start with
-`docs/sdk/references/modeling-strategy.md`. For a targeted change to an existing
-model, go directly to the relevant capability below and include coupled pages
-when they affect the same code change.
+`docs/sdk/references/modeling-strategy.md`. Its asset-coverage guidance helps
+select core structure, important functional features, visible interior, and
+optional detail before geometry implementation begins. It is planning advice,
+not a mandatory component list or validation rule. For a targeted change to an
+existing model, go directly to the relevant capability below and include
+coupled pages when they affect the same code change.
 
 ## Geometry Modeling
 
@@ -98,6 +101,11 @@ For a new asset, search installed catalog materials before settling for inline
 colors when named finishes such as wood, metal, stone, fabric, glass, or coated
 appliance surfaces may be represented. Catalog appearance does not determine
 physical density or contact behavior.
+
+Unless material regions change the geometry split, defer catalog search until
+the structural baseline has compiled without blocking geometry, articulation,
+connection, or collision defects. Then resolve appearance and physics together
+as a focused enrichment pass.
 
 ## Collision
 

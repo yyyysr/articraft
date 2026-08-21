@@ -18,6 +18,37 @@ pass may combine several coupled concerns:
 Do not split coupled decisions merely to minimize the number of pages read. Do
 not include a capability that will not affect the next edit.
 
+## Sketch Asset Coverage
+
+Before choosing geometry APIs, form a short asset plan from the prompt and the
+recognizable construction of the object. This is planning guidance, not a
+required checklist or a compiler contract. Its purpose is to avoid spending a
+complete pass on the outer shell while omitting internal or functional
+structures that make the asset credible.
+
+Group candidate features by value:
+
+- **Core structure**: the body, enclosure, cavity, support, and primary moving
+  parts without which the object is structurally or visually incomplete.
+- **Important function**: racks, shelves, rails, mechanisms, work surfaces, or
+  other features that strongly communicate how the object is used.
+- **Optional detail**: small trim, fasteners, secondary organizers, labels, and
+  close-up details that can be omitted when they do not affect the requested
+  view, interaction, or recognition.
+
+Also distinguish exterior, interior, interactive, and moving features. If an
+opening door, drawer, lid, or removable panel reveals a functional interior,
+plan the major visible contents and their support relationships before
+detailing the exterior. For example, an appliance with an opening wash cavity
+may need its racks, rails, and principal internal mechanism to read as complete;
+it does not automatically need every clip, tine, or fastener.
+
+Use the prompt, expected visible poses, asset scale, and remaining complexity
+to select a coherent scope. Prefer a smaller set of complete, connected,
+recognizable features over many unfinished details. Do not add generic
+components merely to satisfy these categories, and do not turn omissions into
+hard test failures or extra repair loops.
+
 ## Co-design Parts And Motion
 
 Decide which visible features belong to one rigid body and which must move as
@@ -30,6 +61,27 @@ geometry reference when these choices affect one another. Include
 `docs/sdk/references/physics-parameters.md` in the same working set only when
 the current pass also authors mass, contact behavior, damping, friction, or a
 gravity-sensitive preload.
+
+## Compile The Structural Baseline Early
+
+Make the first coherent implementation after asset coverage, representation,
+part boundaries, and primary motion are resolved. It should include the body,
+visible interior required by openings, important functional structures,
+supports, primary articulations, and working clearances. Compile this baseline
+before searching finishes or tuning ordinary physical values.
+
+Keep material regions separable in the geometry, but defer catalog selection,
+ordinary `PhysicsMaterial`, final assembled masses, and non-critical passive
+dynamics until blocking geometry, connection, articulation, and collision
+defects are repaired. Gravity-sensitive joints, stability-critical bases, and
+mechanisms whose layout depends on load or preload are exceptions: plan the
+behavior early, while still deferring unsupported numerical tuning.
+
+After the structural compile succeeds, read material and physics references
+together, complete those attributes in one focused patch, and run the final
+compile. A structural compile warning about deferred appearance or physics is a
+reminder for that enrichment pass, not a reason to abandon a named blocking
+geometry repair.
 
 ## Choose A Primary Geometry Representation
 
@@ -87,7 +139,7 @@ collision before adding decorative details.
 
 ## Close The Part Attributes
 
-Before final compilation of a new object or major redesign, review every
+After the structural baseline compiles, review every
 collision-bearing part as one attribute bundle:
 
 - bind visual materials to its major visible regions; search the installed
@@ -110,6 +162,8 @@ colored visual as completed physics authoring. Read
 
 Begin editing once the current pass has resolved:
 
+- the selected core, important, and optional asset coverage for this pass;
+- the visible interior required by openings or decisive articulated poses;
 - the rigid parts it creates or changes;
 - the coupled articulations and important local frames;
 - the primary geometry representation for each affected part;

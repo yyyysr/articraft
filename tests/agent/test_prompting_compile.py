@@ -29,6 +29,9 @@ CORE_CONCEPTS = (
     "probe_model",
     "find_materials",
     "Never answer with code directly in the assistant response.",
+    "Work structure-first.",
+    "call `compile_model` promptly",
+    "one focused enrichment pass",
 )
 
 
