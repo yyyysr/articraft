@@ -551,6 +551,11 @@ async def execute_single_run(
         await asyncio.to_thread(run_store.append_result, resolved_context.run_id, result_row)
     logger.info("Wrote record to %s", record_dir)
     logger.info("Wrote URDF to %s", resolved_context.record_urdf_path)
+    if isinstance(usd_bytes, (bytes, bytearray)):
+        logger.info(
+            "Wrote USD to %s",
+            storage_repo.layout.record_materialization_usd_path(resolved_context.record_id),
+        )
     return RunExecutionOutcome(
         exit_code=0,
         run_id=resolved_context.run_id,

@@ -191,24 +191,26 @@ class AllInTotalsAgent(FakeAgent):
 def test_library_run_and_rerun_persist_runtime_artifacts(
     fake_agent: None,
     tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     repo_root = tmp_path
-    exit_code = asyncio.run(
-        runner.run_from_input(
-            "make a gearbox",
-            prompt_text="make a gearbox",
-            display_prompt="make a gearbox",
-            repo_root=repo_root,
-            image_path=None,
-            provider="openai",
-            thinking_level="high",
-            max_turns=30,
-            system_prompt_path=DESIGNER_PROMPT_NAME,
-            sdk_package="sdk",
-            label="gearbox try",
-            tags=["gear", "test"],
+    with caplog.at_level(logging.INFO):
+        exit_code = asyncio.run(
+            runner.run_from_input(
+                "make a gearbox",
+                prompt_text="make a gearbox",
+                display_prompt="make a gearbox",
+                repo_root=repo_root,
+                image_path=None,
+                provider="openai",
+                thinking_level="high",
+                max_turns=30,
+                system_prompt_path=DESIGNER_PROMPT_NAME,
+                sdk_package="sdk",
+                label="gearbox try",
+                tags=["gear", "test"],
+            )
         )
-    )
     assert exit_code == 0
 
     records_root = repo_root / "data" / "records"
@@ -229,14 +231,9 @@ def test_library_run_and_rerun_persist_runtime_artifacts(
         encoding="utf-8"
     ) == "<robot name='test'/>"
     assert (materialization_dir / "model.usd").read_bytes() == b"PXR-USDC test"
-    assert (materialization_dir / "compile_report.json").exists()
-    compile_report = json.loads(
-        (materialization_dir / "compile_report.json").read_text(encoding="utf-8")
-    )
-    assert compile_report["metrics"]["compile_level"] == "full"
-    assert compile_report["usd_path"] == "model.usd"
-    assert compile_report["metrics"]["fingerprint_inputs"]["model_py_sha256"]
-    assert compile_report["metrics"]["materialization_fingerprint"]
+    assert f"Wrote URDF to {materialization_dir / 'model.urdf'}" in caplog.text
+    assert f"Wrote USD to {materialization_dir / 'model.usd'}" in caplog.text
+    assert not (materialization_dir / "compile_report.json").exists()
     assert not (materialization_dir / "assets" / "meshes").exists()
 
     record = json.loads((record_dir / "record.json").read_text(encoding="utf-8"))
@@ -672,13 +669,7 @@ def test_library_run_succeeds_when_persisted_input_image_disappears(
     materialization_dir = repo_root / "data" / "cache" / "record_materialization" / record_dir.name
     assert (record_dir / "record.json").exists()
     assert _artifact_path(record_dir, "provenance.json").exists()
-    assert (materialization_dir / "compile_report.json").exists()
-    compile_report = json.loads(
-        (materialization_dir / "compile_report.json").read_text(encoding="utf-8")
-    )
-    assert compile_report["metrics"]["compile_level"] == "full"
-    assert compile_report["metrics"]["fingerprint_inputs"]["model_py_sha256"]
-    assert compile_report["metrics"]["materialization_fingerprint"]
+    assert not (materialization_dir / "compile_report.json").exists()
     assert list((_active_revision_dir(record_dir) / "inputs").iterdir()) == []
 
     run_dir = next((repo_root / "data" / "cache" / "runs").iterdir())

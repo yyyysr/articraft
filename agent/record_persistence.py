@@ -36,16 +36,8 @@ from agent.run_context import (
 )
 from agent.tools import resolve_image_path as _resolve_image_path
 from articraft.values import ProviderName
-from storage.materialize import (
-    MaterializationStore,
-    build_compile_fingerprint_from_inputs,
-    ensure_record_artifacts_exist,
-)
+from storage.materialize import ensure_record_artifacts_exist
 from storage.models import (
-    CompileReport as StorageCompileReport,
-)
-from storage.models import (
-    CompileWarning,
     CreatorMetadata,
     DisplayMetadata,
     EnvironmentSettings,
@@ -590,7 +582,6 @@ def write_success_record(
     revision_seed = request.revision_seed
     inherited_inputs = request.inherited_inputs or []
 
-    materializations = MaterializationStore(storage_repo)
     persisted_warnings = list(compile_warnings)
     persisted_urdf_xml = urdf_xml
     if _should_rewrite_visual_meshes_to_glb(
@@ -657,34 +648,8 @@ def write_success_record(
 
     prompt_sha = _sha256_text(prompt_text)
     model_py_sha = _sha256_file(context.record_model_path)
-    fingerprint_inputs = {
-        "model_py_sha256": model_py_sha,
-        "sdk_fingerprint": None,
-    }
-
-    compile_report = StorageCompileReport(
-        schema_version=1,
-        record_id=context.record_id,
-        status="success",
-        urdf_path="model.urdf",
-        usd_path="model.usd" if isinstance(usd_bytes, (bytes, bytearray)) else None,
-        warnings=[
-            CompileWarning(code="warning", message=warning) for warning in persisted_warnings
-        ],
-        checks_run=["compile_urdf"],
-        metrics={
-            "compile_level": "full",
-            "turn_count": turn_count,
-            "tool_call_count": tool_call_count,
-            "compile_attempt_count": compile_attempt_count,
-            "active_revision_id": revision_id,
-            "fingerprint_inputs": fingerprint_inputs,
-            "materialization_fingerprint": build_compile_fingerprint_from_inputs(
-                fingerprint_inputs
-            ),
-        },
-    )
-    materializations.write_compile_report(context.record_id, compile_report)
+    # Compile diagnostics are retained in the run/revision trace. Do not emit a
+    # second compile_report.json artifact for generated record materialization.
 
     provenance = Provenance(
         schema_version=2,
