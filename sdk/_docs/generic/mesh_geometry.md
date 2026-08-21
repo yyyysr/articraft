@@ -97,6 +97,11 @@ For appliance-like side shells, `superellipse_side_loft(...)`,
 sections of `(y, z_min, z_max, width)` and loft along Y. Read the detail
 `Profile and Shell Helpers` section for their full controls.
 
+For continuously bent wire, tube, frame, rail, loop, or guard geometry, read
+`docs/sdk/references/geometry/wires-and-frames.md`. It is the focused Detail
+page for spline tubes, swept non-circular profiles, and readable authored paths;
+it does not define articulation or rigid-part structure.
+
 Use these builders for common rounded forms instead of native sharp primitives:
 
 ```python

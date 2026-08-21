@@ -82,12 +82,22 @@ Include the selected geometry reference in the same working set when a moving
 part's local frame, retained insertion, clearance, or shape must be designed
 around its joint.
 
+For bounded translation, nested stages, retained insertion, detailed frame
+direction, or strict joint rules, use
+`docs/sdk/references/articulation/details.md` after the articulated path is
+selected. This is a Detail page, not a second overview.
+
 For a common door, drawer, fixed attachment, or swivel assembly, start with
 `docs/sdk/references/components/assembly-patterns.md`. It contains minimal
 copyable templates for visual binding, enum-safe articulation calls, bounded
 revolute/prismatic joints, and continuous swivels. For exposed hinge leaves,
 knuckles, or pin detail, add
 `docs/sdk/references/components/hinges.md` as a focused component reference.
+
+For continuously bent wire, tube, frame, rail, loop, guard, or basket-like
+geometry, use `docs/sdk/references/geometry/wires-and-frames.md`. This page
+resolves geometry construction only; pair it with articulation guidance only
+when the resulting rigid part moves.
 
 ## Appearance And Materials
 
@@ -134,6 +144,8 @@ earlier structural pass that does not yet assign physical values.
   `docs/sdk/references/probe-tooling.md`.
 - Assertions, decisive poses, collision checks, and QC allowances:
   `docs/sdk/references/testing.md`.
+- Complete nested-fit, retained-insertion, containment, decisive-pose, or
+  scoped-overlap diagnostics: `docs/sdk/references/testing/details.md`.
 
 These are diagnostic references unless validation is part of the next code
 change. Do not preload them merely because every finished model eventually

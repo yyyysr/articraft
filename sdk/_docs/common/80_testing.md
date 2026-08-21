@@ -1,4 +1,12 @@
-# Testing
+# Testing Details
+
+This detail reference contains the complete testing conventions, allowances,
+pose queries, and exact assertions. Read the generic testing overview first;
+use this page when a concrete containment, retained insertion, nested fit,
+decisive pose, or scoped overlap question remains.
+
+This page is diagnostic detail, not a checklist to load before the first
+structural implementation. The compiler owns baseline sanity and QC.
 
 Import from top-level `sdk`:
 

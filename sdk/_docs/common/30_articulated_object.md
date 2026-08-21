@@ -1,9 +1,16 @@
-# ArticulatedObject
+# Articulation Details And Motion Patterns
 
 ## Purpose
 
-`ArticulatedObject` is the root authored assembly. Use it to create parts,
-articulations, materials, and model-level metadata.
+This detail reference expands the generic assembly contract with complete
+authoring signatures, frame and direction conventions, bounded motion,
+retained insertion, lookup, and validation behavior. Read it after choosing an
+articulated structure when the overview or common assembly patterns do not
+resolve a concrete motion-design question.
+
+For the compact contract, read
+`docs/sdk/references/articulated-object.md`. This page does not prescribe a
+product topology or introduce semantic articulation helpers.
 
 ## Import
 
@@ -125,9 +132,9 @@ model.articulation(
 )
 ```
 
-These numbers are starting estimates, not universal appliance-hinge values.
-Read `physics-parameters.md` and scale the choice to the moving part's mass,
-size, construction, and mechanism.
+These numbers are starting estimates, not universal hinge values. Read
+`docs/sdk/references/physics-parameters.md` and scale the choice to the moving
+part's mass, size, construction, and mechanism.
 
 ## Frame And Direction Conventions
 
@@ -345,9 +352,11 @@ model.articulation(
 
 ## See Also
 
-- `20_core_types.md` for `Part`, `Articulation`, `MotionLimits`, and materials
-- `35_physics_parameters.md` for material, mass, fallback, and joint-dynamics guidance
-- `80_testing.md` for geometry and articulation QC
+- `docs/sdk/references/core-types.md` for `Part`, `Articulation`,
+  `MotionLimits`, and materials
+- `docs/sdk/references/physics-parameters.md` for material, mass, fallback, and
+  joint-dynamics guidance
+- `docs/sdk/references/testing/details.md` for geometry and articulation QC
 
 ## Clarifications for agent usage
 

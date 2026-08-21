@@ -101,6 +101,11 @@ For prismatic or telescoping mechanisms, preserve hidden retained insertion at
 maximum travel. The visible member length, joint travel, and attachment geometry
 must remain mechanically consistent across tested poses.
 
+Read `docs/sdk/references/articulation/details.md` when a concrete mechanism
+needs the full frame/direction examples, bounded translation rules, nested
+stages, retained-insertion sizing, lookup behavior, or strict joint rules. It is
+a Detail page for the selected articulated path, not another assembly overview.
+
 Use `Mimic` for a simple linear follower relationship only. It does not model a
 nonlinear linkage or a closed kinematic loop.
 
@@ -142,7 +147,9 @@ arbitrary fixed joints or disconnected support geometry.
   raw offsets would obscure the intended relationship.
 
 Read `docs/sdk/references/testing.md` for pose-aware structural and clearance
-assertions.
+assertions. Use `docs/sdk/references/testing/details.md` only when a concrete
+nested fit, decisive pose, containment, or scoped allowance needs the complete
+testing contract.
 
 Stop reading when the affected rigid-part boundaries, parent-child relations,
 joint frames, axes, and limits are clear enough to implement the current

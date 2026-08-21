@@ -112,6 +112,12 @@ An isolated part allowance is appropriate only when disconnected geometry is
 intentional, such as a nonphysical annotation. A physical mount should be
 modeled as connected or articulated geometry instead.
 
+Read `docs/sdk/references/testing/details.md` when the overview does not resolve
+a concrete nested fit, retained-insertion proof, decisive articulated pose,
+containment assertion, or element-scoped allowance. Use section reads such as
+`section="Allowances"` or `section="Exact Assertions"` to avoid loading the
+complete detail page for one diagnostic question.
+
 ## High-Signal Test Selection
 
 - Check required parts and articulations by stable names.

@@ -6,6 +6,11 @@ Use this stack for thin curved parts such as handles, loops, whisk cages, fan
 guards, baskets, and tubular frames. Start with the spline helpers for almost
 all continuously bent parts.
 
+This is a geometry detail page. It describes continuous wire, tube, frame, and
+rail construction but does not define rigid-part boundaries or motion. Read
+`docs/sdk/references/articulated-object.md` when the resulting geometry belongs
+to a moving part.
+
 ## Import
 
 ```python
@@ -173,7 +178,8 @@ procedurally but the final part should still read as one continuous bend.
 
 ## See Also
 
-- `40_mesh_geometry.md` for general procedural mesh authoring
+- `docs/sdk/references/geometry/mesh-geometry.md` for representation choices
+- `docs/sdk/references/geometry/mesh-api.md` for general procedural mesh API
 
 ## Clarifications for agent usage
 

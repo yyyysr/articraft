@@ -35,6 +35,9 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
     assert "docs/sdk/references/geometry/mesh-geometry.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/mesh-api.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/section-lofts-api.md" in bundle.files_by_path
+    assert "docs/sdk/references/articulation/details.md" in bundle.files_by_path
+    assert "docs/sdk/references/geometry/wires-and-frames.md" in bundle.files_by_path
+    assert "docs/sdk/references/testing/details.md" in bundle.files_by_path
     assert "docs/sdk/references/cadquery/overview.md" in bundle.files_by_path
     assert "docs/sdk/references/cadquery/helpers.md" in bundle.files_by_path
     assert "docs/sdk/references/geometry/panels-and-grilles.md" not in bundle.files_by_path
@@ -61,6 +64,15 @@ def test_load_sdk_docs_bundle_mounts_router_and_default_refs() -> None:
     assert (
         bundle.resolve("docs/sdk/references/geometry/section-lofts-api.md").disk_path.name
         == "46_section_lofts.md"
+    )
+    assert bundle.resolve("docs/sdk/references/articulation/details.md").disk_path.name == (
+        "30_articulated_object.md"
+    )
+    assert bundle.resolve("docs/sdk/references/geometry/wires-and-frames.md").disk_path.name == (
+        "45_wires.md"
+    )
+    assert bundle.resolve("docs/sdk/references/testing/details.md").disk_path.name == (
+        "80_testing.md"
     )
 
 
@@ -91,6 +103,9 @@ def test_sdk_entrypoint_and_strategy_preserve_working_set_contract() -> None:
     assert "docs/sdk/references/cadquery/helpers.md" in capability_index
     assert "docs/sdk/references/geometry/mesh-api.md" in capability_index
     assert "docs/sdk/references/geometry/section-lofts-api.md" in capability_index
+    assert "docs/sdk/references/articulation/details.md" in capability_index
+    assert "docs/sdk/references/geometry/wires-and-frames.md" in capability_index
+    assert "docs/sdk/references/testing/details.md" in capability_index
     assert "## Stop Condition" in capability_index
 
     strategy = bundle.read_text("docs/sdk/references/modeling-strategy.md")
