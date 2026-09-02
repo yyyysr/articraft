@@ -84,7 +84,8 @@ def test_prompt_outputs_are_current() -> None:
         },
         absent={"write_code", "replace", "write_file"},
     )
-    assert "FREEFORM tool" in openai_text
+    assert "JSON `input` string" in openai_text
+    assert "FREEFORM tool" not in openai_text
 
     codex_cli_text = compiled_by_name["designer_system_prompt_codex_cli.txt"]
     _assert_shared_contract(codex_cli_text)

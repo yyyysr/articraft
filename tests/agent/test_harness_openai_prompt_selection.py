@@ -75,7 +75,8 @@ def test_openai_prompt_resolution_and_payload_preview() -> None:
         "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in instructions
     )
-    assert "FREEFORM tool" in instructions
+    assert "JSON `input` string" in instructions
+    assert "FREEFORM tool" not in instructions
     assert "write_code" not in instructions
     assert "Prefer several small `apply_patch` edits over one giant patch" in instructions
 
@@ -155,9 +156,13 @@ def test_openai_payload_preview_includes_find_examples_tool() -> None:
         if tool.get("type") == "function"
     }
     assert strict_by_name["read_file"] is False
+    assert strict_by_name["apply_patch"] is True
     assert strict_by_name["compile_model"] is True
     assert strict_by_name["probe_model"] is True
     assert strict_by_name["find_examples"] is True
+    apply_patch_schema = next(tool for tool in payload["tools"] if tool["name"] == "apply_patch")
+    assert set(apply_patch_schema["parameters"]["properties"]) == {"input"}
+    assert apply_patch_schema["parameters"]["required"] == ["input"]
     assert (
         "Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`."
         in payload["instructions"]
