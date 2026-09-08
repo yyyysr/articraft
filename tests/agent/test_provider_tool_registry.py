@@ -43,7 +43,9 @@ def test_provider_tool_registry_schemas() -> None:
         "find_materials",
     }
     openai_schemas = openai_registry.get_tool_schemas()
-    apply_patch_schema = next(s for s in openai_schemas if s.get("name") == "apply_patch")
+    apply_patch_schema = next(
+        s for s in openai_schemas if s.get("function", {}).get("name") == "apply_patch"
+    )
     read_file_schema = next(
         s for s in openai_schemas if s.get("function", {}).get("name") == "read_file"
     )
@@ -76,15 +78,17 @@ def test_provider_tool_registry_schemas() -> None:
     write_file_schema = next(
         s for s in gemini_schemas if s.get("function", {}).get("name") == "write_file"
     )
-    assert apply_patch_schema.get("type") == "custom"
+    assert apply_patch_schema.get("type") == "function"
+    assert set(apply_patch_schema["function"]["parameters"]["properties"].keys()) == {"input"}
+    assert apply_patch_schema["function"]["parameters"]["required"] == ["input"]
     codex_apply_patch_schema = next(
         s for s in codex_cli_schemas if s.get("function", {}).get("name") == "apply_patch"
     )
     assert codex_apply_patch_schema.get("type") == "function"
     assert set(codex_apply_patch_schema["function"]["parameters"]["properties"].keys()) == {"input"}
     assert codex_apply_patch_schema["function"]["parameters"]["required"] == ["input"]
-    apply_patch_description = apply_patch_schema["description"]
-    assert "current bound file" in apply_patch_description
+    apply_patch_description = apply_patch_schema["function"]["description"]
+    assert "current bound `model.py`" in apply_patch_description
     assert "Single-file mode only" in apply_patch_description
     assert "`*** Add File`, `*** Delete File`, or `*** Move to`" in apply_patch_description
     read_file_props = read_file_schema["function"]["parameters"]["properties"]

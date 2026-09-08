@@ -34,7 +34,7 @@
 <tools>
 - Available tools: `read_file`, `apply_patch`, `compile_model`, `probe_model`, `find_examples`, and `find_materials`.
 - `read_file` is a JSON tool for reading exact virtual workspace file text.
-- `apply_patch` is a FREEFORM tool; send raw patch text, not JSON.
+- `apply_patch` accepts a Codex-style patch in the required JSON `input` string.
 - `compile_model` runs compile + QC and returns structured `<compile_signals>`.
 - `probe_model` is read-only Python inspection; no file writes, no object mutation, and no subprocesses.
 - `find_examples` searches curated SDK examples for patterns. Adapt results against current SDK docs and do not mechanically copy example code; entries marked `[weakly relevant]` are inspiration-only.

@@ -10,12 +10,15 @@ import pytest
 import agent.harness as harness
 from agent.feedback import build_compile_signal_bundle
 from agent.harness import ArticraftAgent
+from agent.harness_codec import MessageCodec
 from agent.harness_compile import CompileFeedbackLoop
 from agent.models import CompileReport, TerminateReason
 from agent.providers.openai import OpenAILLM
+from agent.tools import build_tool_registry
 from agent.tools.compile_model import CompileModelTool
 from agent.tools.registry import ToolRegistry
 from agent.tools.write_code import WriteFileTool
+from agent.workspace_docs import build_virtual_workspace
 
 
 class _CountingDisplay:
@@ -95,6 +98,57 @@ def test_compile_async_uses_timeout_wrapper(
         "sdk_package": "sdk",
         "rewrite_visual_glb": False,
     }
+
+
+def test_openai_function_payload_executes_json_apply_patch(tmp_path: Path) -> None:
+    model_path = tmp_path / "model.py"
+    model_path.write_text("value = 1\n", encoding="utf-8")
+    agent = ArticraftAgent.__new__(ArticraftAgent)
+    agent.file_path = str(model_path)
+    agent.sdk_package = "sdk"
+    agent.runtime_limits = None
+    agent.checkpoint_urdf_path = None
+    agent.compile_feedback = CompileFeedbackLoop(
+        file_path=str(model_path),
+        sdk_package="sdk",
+        runtime_limits=None,
+        checkpoint_urdf_path=None,
+    )
+    agent.tool_registry = build_tool_registry("openai", sdk_package="sdk")
+    agent.virtual_workspace = build_virtual_workspace(
+        Path(__file__).resolve().parents[2],
+        model_file_path=model_path,
+        sdk_package="sdk",
+    )
+    agent.message_codec = MessageCodec(provider="openai")
+
+    result, tool_message = asyncio.run(
+        agent._execute_tool(
+            {
+                "id": "patch_1",
+                "type": "function",
+                "function": {
+                    "name": "apply_patch",
+                    "arguments": json.dumps(
+                        {
+                            "input": (
+                                "*** Begin Patch\n"
+                                "*** Update File: model.py\n"
+                                "@@\n"
+                                "-value = 1\n"
+                                "+value = 2\n"
+                                "*** End Patch"
+                            )
+                        }
+                    ),
+                },
+            }
+        )
+    )
+
+    assert result.error is None
+    assert model_path.read_text(encoding="utf-8") == "value = 2\n"
+    assert tool_message["tool_type"] == "function"
 
 
 def test_assistant_message_preserves_provider_extra_content_without_text_or_tools() -> None:

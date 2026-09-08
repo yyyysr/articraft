@@ -86,7 +86,7 @@ def build_tool_registry(
     if provider_norm is ProviderName.OPENAI:
         tools: list[BaseDeclarativeTool] = [
             ReadFileTool(),
-            ApplyPatchFreeformTool(),
+            ApplyPatchJsonTool(),
             CompileModelTool(),
             ProbeModelTool(sdk_package=package, runtime_limits=runtime_limits),
         ]

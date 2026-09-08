@@ -95,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         compile_report = repo.read_json(
             repo.layout.record_materialization_compile_report_path(record_dir.name)
         )
+        repo.layout.record_materialization_compile_report_path(record_dir.name).unlink(missing_ok=True)
         rendered = _render_compile_report_signals(
             compile_report if isinstance(compile_report, dict) else None
         )
@@ -109,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     compile_report = repo.read_json(
         repo.layout.record_materialization_compile_report_path(record_dir.name)
     )
+    repo.layout.record_materialization_compile_report_path(record_dir.name).unlink(missing_ok=True)
     rendered = _render_compile_report_signals(
         compile_report if isinstance(compile_report, dict) else None
     )
